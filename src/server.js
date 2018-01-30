@@ -1,47 +1,63 @@
+import { isRegistrationValid } from './lookups'
 
 class SubdomainServer {
-  function queueRegistration(subdomainName, owner, sequenceNumber, zonefile) {
-    return new Promise(resolve => {
-      db.run('INSERT INTO subdomain_queue ' +
-             '(subdomainName, owner, sequenceNumber, zonefile, status) VALUES ?, ?, ?, ?, ?',
-             [subdomainName, owner, sequenceNumber, zonefile, 'received'],
-             (err) => {if (err) { reject(err) } else { resolve() }})
-    })
+  queueRegistration(subdomainName, owner, sequenceNumber, zonefile) {
+    return isRegistrationValid(subdomainName, this.domainName,
+                               owner, sequenceNumber, zonefile)
+      .then((valid) => {
+        if (!valid) {
+          throw new Error('')
+        }
+        return new Promise((resolve, reject) => {
+          this.lock.writeLock((release) => {
+            db.run('INSERT INTO subdomain_queue ' +
+                   '(subdomainName, owner, sequenceNumber, zonefile, status) VALUES ?, ?, ?, ?, ?',
+                   [subdomainName, owner, sequenceNumber, zonefile, 'received'],
+                   (err) => {
+                     release()
+                     if (err) {
+                       reject(err)
+                     } else {
+                       resolve()
+                     }})
+          })
+        })
+      })
   }
 
-  function backupZonefile(zonefile: String) {
+  backupZonefile(zonefile: String) {
     return new Promise((resolve, reject) => {
       db.run('INSERT INTO subdomain_zonefile_backups (zonefile) VALUES ?',
              [zonefile], (err) => {if (err) { reject(err) } else { resolve() }})
     })
   }
 
-  function addTransactionToTrack(txHash: String, zonefile: String) {
+  addTransactionToTrack(txHash: String, zonefile: String) {
     return new Promise((resolve, reject) => {
       db.run('INSERT INTO transactions_tracked (txHash, zonefile) VALUES ?, ?',
              [txHash, zonefile], (err) => {if (err) { reject(err) } else { resolve() }})
     })
   }
 
-  function updateQueueStatus(namesSubmitted: Array<String>, txHash: String) {
+  updateQueueStatus(namesSubmitted: Array<String>, txHash: String) {
     return Promise.all(namesSubmitted.map(
-      name => return new Promise((resolve, reject) => {
+      name => new Promise((resolve, reject) => {
         db.run('UPDATE subdomain_queue SET status = ?, status_more = ? WHERE subdomainName = ?',
                ['submitted', txHash, name], (err) => {if (err) { reject(err) } else { resolve() }})
       })
     ))
   }
 
-  function markTransactionsComplete(txStatuses: Array<{txHash: String}>) {
+  markTransactionsComplete(txStatuses: Array<{txHash: String}>) {
     return Promise.all(txStatuses.map(
-      txHash => return new Promise((resolve, reject) => {
+      txHash => new Promise((resolve, reject) => {
         db.run('DROP FROM transactions_tracked WHERE txHash = ?',
                [txHash], (err) => {if (err) { reject(err) } else { resolve() }})
       })
     ))
   }
 
-  function fetchQueue() {
+  fetchQueue() {
     return new Promise((resolve, reject) => {
       db.all('SELECT subdomainName, owner, sequenceNumber, zonefile, signature' +
              ' FROM subdomain_queue WHERE status = "received"',
@@ -49,9 +65,9 @@ class SubdomainServer {
     })
   }
 
-  function submitBatch() {
-    this.getUpdateLock()
-      .then(() => {
+  submitBatch() {
+    return new Promise((resolve, reject) => {
+      this.lock.writeLock((release) => {
         this.fetchQueue()
           .then(queue => {
             let update = makeUpdateZonefile(this.domainName, queue, 4096)
@@ -63,12 +79,17 @@ class SubdomainServer {
               .then((txHash) => this.updateQueueStatus(updatedFromQueue, txHash))
               .then(() => this.addTransactionToTrack(txHash, zonefile))
           })
-          .catch((err) => {new Error('Exception in submitting update.')})
-          .finally(() => this.releaseLock())
-      })
+          .then(txHash => resolve(txHash))
+          .finally(() => release())
+      }, { timeout: 1,
+           timeoutCallback: () => {
+             throw new Error('Failed to obtain lock')
+           }
+         })
+    })
   }
 
-  function checkZonefiles() {
+  checkZonefiles() {
     return new Promise((resolve) => {
       db.all('SELECT txHash, zonefile FROM transactions_tracked',
              (err, rows) => {
@@ -80,24 +101,5 @@ class SubdomainServer {
       .then(entries => checkTransactions(entries))
       .then(txStatuses => this.markTransactionsComplete(
         txStatuses.filter( x => x.status )))
-  }
-
-  function getUpdateLock() {
-    return new Promise( (resolve, reject) => {
-      db.all("SELECT * FROM subdomainUpdatesLock", (err, rows) => {
-        if (rows.length > 0) {
-          reject('Lock is held: could be stale.')
-        } else {
-          db.exec("INSERT INTO subdomainUpdatesLock (held) VALUES (1)",
-                  (err, row) => {
-                    if (err) {
-                      reject(err)
-                    } else {
-                      resolve(true)
-                    }
-                  })
-        }
-      })
-    })
   }
 }

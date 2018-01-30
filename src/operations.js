@@ -1,43 +1,66 @@
+import bsk from 'blockstack'
+import { makeZoneFile } from 'zone-file'
+
 export type SubdomainOp = {
   owner: String,
   sequenceNumber: number,
   zonefilePartsLength: number,
   zonefileParts: Array<String>,
   subdomainName: String,
-  ?signature: String
+  signature?: String
+}
+
+function destructZonefile(zonefile: String) {
+  const encodedZonefile = Buffer.from(zonefile)
+        .toString('base64')
+  // we pack into 250 byte strings -- the entry "zf99=" eliminates 5 useful bytes,
+  // and the max is 255.
+  const pieces = 1 + Math.floor(encodedZonefile.length / 250)
+  const destructed = []
+  for (let i = 0; i < pieces; i++) {
+    const startIndex = i * 250
+    const currentPiece = encodedZonefile.slice(startIndex, startIndex + 250)
+    if (currentPiece.length > 0) {
+      destructed.push(currentPiece)
+    }
+  }
+  return destructed
 }
 
 function subdomainOpToZFPieces(operation: SubdomainOp) {
-  let destructedZonefile = destructZonefile(operation.zonefile)
-  let txt = [`owner=${operation.owner}`,
-             `seqn=${operation.sequenceNumber}`,
-             `parts=${destructedZonefile.length}`]
+  const destructedZonefile = destructZonefile(operation.zonefile)
+  const txt = [`owner=${operation.owner}`,
+               `seqn=${operation.sequenceNumber}`,
+               `parts=${destructedZonefile.length}`]
   destructedZonefile.forEach(
     (zfPart, ix) => txt.push(`zf${ix}=${zfPart}`))
 
-  let record = { name: operation.subdomainName,
-                 txt }
-  return record
+  if (operation.hasOwnProperty('signature')) {
+    txt.push(`sig=${signature}`)
+  }
+
+  return { name: operation.subdomainName,
+           txt }
 }
 
 export function makeUpdateZonefile(
   domainName: String,
   updates: Array<SubdomainOp>,
   maxZonefileBytes: number) {
-  let subdomainRecs = []
-  let zonefileObject = { '$origin': domainName,
-                         '$ttl': 3600,
-                         'txt': subdomainRecs }
+  const subdomainRecs = []
+  const zonefileObject = { '$origin': domainName,
+                           '$ttl': 3600,
+                           'txt': subdomainRecs }
+  const submitted = []
   let outZonefile = makeZoneFile(zonefileObject)
-  let submitted = []
   for (let i = 0; i < updates.length; i++) {
     subdomainRecs.push(subdomainOpToZFPieces(updates[i]))
-    let newZonefile = makeZoneFile(zonefileObject)
+    const newZonefile = makeZoneFile(zonefileObject)
     if (newZonefile.length < maxZoneFileBytes) {
       outZonefile = newZonefile
       submitted.push(updates[i].subdomainName)
     } else {
-      break // zonefile got too long! use last generated one.
+      break // zonefile got too long, use last generated one!
     }
   }
 
@@ -57,7 +80,8 @@ export function submitUpdate(
     .then(txHex => bsk.network.broadcastTransaction(txHex))
 }
 
-export function checkTransactions(txs: Array<{txHash: String, zonefile: String}>) {
+export function checkTransactions(txs: Array<{txHash: String, zonefile: String}>):
+Promise<Array<{txHash: String, status: Boolean}>> {
   return bsk.network.getBlockHeight()
     .then(
       blockHeight => Promise.all(txs.map(
@@ -67,7 +91,7 @@ export function checkTransactions(txs: Array<{txHash: String, zonefile: String}>
               return Promise.resolve({ txHash: tx.txHash, status: false })
             } else {
               return bsk.network.publishZonefile(tx.zonefile)
-                .then(() => { txHash: tx.txHash, status: true })
+                .then(() => ({ txHash: tx.txHash, status: true }))
             }
           })
       ))
