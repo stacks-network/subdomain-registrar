@@ -36,7 +36,7 @@ function subdomainOpToZFPieces(operation: SubdomainOp) {
     (zfPart, ix) => txt.push(`zf${ix}=${zfPart}`))
 
   if (operation.hasOwnProperty('signature')) {
-    txt.push(`sig=${signature}`)
+    txt.push(`sig=${operation.signature}`)
   }
 
   return { name: operation.subdomainName,
@@ -48,15 +48,15 @@ export function makeUpdateZonefile(
   updates: Array<SubdomainOp>,
   maxZonefileBytes: number) {
   const subdomainRecs = []
-  const zonefileObject = { '$origin': domainName,
-                           '$ttl': 3600,
-                           'txt': subdomainRecs }
+  const zonefileObject = { $origin: domainName,
+                           $ttl: 3600,
+                           txt: subdomainRecs }
   const submitted = []
   let outZonefile = makeZoneFile(zonefileObject)
   for (let i = 0; i < updates.length; i++) {
     subdomainRecs.push(subdomainOpToZFPieces(updates[i]))
     const newZonefile = makeZoneFile(zonefileObject)
-    if (newZonefile.length < maxZoneFileBytes) {
+    if (newZonefile.length < maxZonefileBytes) {
       outZonefile = newZonefile
       submitted.push(updates[i].subdomainName)
     } else {
