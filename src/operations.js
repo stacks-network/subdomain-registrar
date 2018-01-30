@@ -1,4 +1,4 @@
-import bsk from 'blockstack'
+import { transactions, config as bskConfig } from 'blockstack'
 import { makeZoneFile } from 'zone-file'
 
 export type SubdomainOp = {
@@ -52,7 +52,8 @@ export function makeUpdateZonefile(
                            $ttl: 3600,
                            txt: subdomainRecs }
   const submitted = []
-  let outZonefile = makeZoneFile(zonefileObject)
+  let outZonefile = makeZoneFile(zonefileObject,
+                                 '{$origin}\n{$ttl}\n{txt}\n{uri}\n')
   for (let i = 0; i < updates.length; i++) {
     subdomainRecs.push(subdomainOpToZFPieces(updates[i]))
     const newZonefile = makeZoneFile(zonefileObject)
@@ -73,24 +74,24 @@ export function submitUpdate(
   zonefile: String,
   ownerKey: String,
   paymentKey: String) {
-  return bsk.transactions.makeUpdate(domainName,
-                                     ownerKey,
-                                     paymentKey,
-                                     zonefile)
-    .then(txHex => bsk.network.broadcastTransaction(txHex))
+  return transactions.makeUpdate(domainName,
+                                 ownerKey,
+                                 paymentKey,
+                                 zonefile)
+    .then(txHex => bskConfig.network.broadcastTransaction(txHex))
 }
 
 export function checkTransactions(txs: Array<{txHash: String, zonefile: String}>):
 Promise<Array<{txHash: String, status: Boolean}>> {
-  return bsk.network.getBlockHeight()
+  return bskConfig.network.getBlockHeight()
     .then(
       blockHeight => Promise.all(txs.map(
-        tx => bsk.network.getTransactionInfo(tx.txHash)
+        tx => bskConfig.network.getTransactionInfo(tx.txHash)
           .then(txInfo => {
-            if (txInfo.block_height < blockHeight + 10) {
+            if (txInfo.block_height + 10 > blockHeight) {
               return Promise.resolve({ txHash: tx.txHash, status: false })
             } else {
-              return bsk.network.publishZonefile(tx.zonefile)
+              return bskConfig.network.publishZonefile(tx.zonefile)
                 .then(() => ({ txHash: tx.txHash, status: true }))
             }
           })

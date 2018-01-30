@@ -1,31 +1,33 @@
 import { makeUpdateZonefile, submitUpdate, checkTransactions } from './operations'
 import { isRegistrationValid } from './lookups'
 import sqlite3 from 'sqlite3'
+import ReadWriteLock from 'rwlock'
 
 const CREATE_QUEUE = `CREATE TABLE subdomain_queue (
-index INTEGER PRIMARY KEY,
-subdomainName TEXT NOT NULL,
-owner TEXT NOT NULL,
-sequenceNumber TEXT NOT NULL,
-zonefile TEXT NOT NULL,
-status TEXT NOT NULL,
-status_more TEXT,
-received_ts DATETIME DEFAULT CURRENT_TIMESTAMP
+ queue_ix INTEGER PRIMARY KEY,
+ subdomainName TEXT NOT NULL,
+ owner TEXT NOT NULL,
+ sequenceNumber TEXT NOT NULL,
+ zonefile TEXT NOT NULL,
+ signature TEXT DEFAULT NULL,
+ status TEXT NOT NULL,
+ status_more TEXT,
+ received_ts DATETIME DEFAULT CURRENT_TIMESTAMP
 );`
 
 const CREATE_QUEUE_INDEX = `CREATE INDEX subdomain_queue_index ON
-subdomain_queue (subdomainName);`
+ subdomain_queue (subdomainName);`
 
 const CREATE_MYZONEFILE_BACKUPS = `CREATE TABLE subdomain_zonefile_backups (
-index INTEGER PRIMARY KEY,
-zonefile TEXT NOT NULL,
-timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+ backup_ix INTEGER PRIMARY KEY,
+ zonefile TEXT NOT NULL,
+ timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );`
 
 const CREATE_TRANSACTIONS_TRACKED = `CREATE TABLE transactions_tracked (
-index INTEGER PRIMARY KEY,
-txHash TEXT NOT NULL,
-zonefile TEXT NOT NULL
+ tracker_ix INTEGER PRIMARY KEY,
+ txHash TEXT NOT NULL,
+ zonefile TEXT NOT NULL
 );`
 
 
@@ -68,6 +70,7 @@ export class SubdomainServer {
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
     this.dbLocation = config.dbLocation
+    this.lock = new ReadWriteLock()
   }
 
   initializeServer() {
@@ -95,7 +98,11 @@ export class SubdomainServer {
   createTables() {
     const toCreate = [CREATE_QUEUE, CREATE_QUEUE_INDEX, CREATE_MYZONEFILE_BACKUPS,
                       CREATE_TRANSACTIONS_TRACKED]
-    return dbRun(this.db, toCreate.join(' \n'))
+    let creationPromise = Promise.resolve()
+    toCreate.forEach((createCmd) => {
+      creationPromise = creationPromise.then(() => dbRun(this.db, createCmd))
+    })
+    return creationPromise
   }
 
   queueRegistration(subdomainName, owner, sequenceNumber, zonefile) {
@@ -114,12 +121,12 @@ export class SubdomainServer {
         return new Promise((resolve, reject) => {
           this.lock.writeLock((release) => {
             const dbCmd = 'INSERT INTO subdomain_queue ' +
-                  '(subdomainName, owner, sequenceNumber, zonefile, status) VALUES ?, ?, ?, ?, ?'
+                  '(subdomainName, owner, sequenceNumber, zonefile, status) VALUES (?, ?, ?, ?, ?)'
             const dbArgs = [subdomainName, owner, sequenceNumber, zonefile, 'received']
             dbRun(this.db, dbCmd, dbArgs)
               .then(() => resolve())
               .catch((err) => reject(err))
-              .finally(release)
+              .then(() => release())
           })
         })
       })
@@ -127,7 +134,7 @@ export class SubdomainServer {
 
   getSubdomainStatus(subdomainName: String) {
     const lookup = 'SELECT status, status_more FROM subdomain_queue' +
-          ' WHERE subdomainName = ? ORDER BY index DESC LIMIT 1'
+          ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
     return dbAll(this.db, lookup, [subdomainName])
       .then((rows) => {
         if (rows.length > 0) {
@@ -139,17 +146,17 @@ export class SubdomainServer {
   }
 
   isSubdomainInQueue(subdomainName: String) {
-    this.getSubdomainStatus(subdomainName)
+    return this.getSubdomainStatus(subdomainName)
       .then(status => (status.status !== 'not_queued'))
   }
 
   backupZonefile(zonefile: String) {
-    return dbRun(this.db, 'INSERT INTO subdomain_zonefile_backups (zonefile) VALUES ?',
+    return dbRun(this.db, 'INSERT INTO subdomain_zonefile_backups (zonefile) VALUES (?)',
                  [zonefile])
   }
 
   addTransactionToTrack(txHash: String, zonefile: String) {
-    return dbRun(this.db, 'INSERT INTO transactions_tracked (txHash, zonefile) VALUES ?, ?',
+    return dbRun(this.db, 'INSERT INTO transactions_tracked (txHash, zonefile) VALUES (?, ?)',
                  [txHash, zonefile])
       .then(() => txHash)
   }
@@ -162,7 +169,8 @@ export class SubdomainServer {
   }
 
   markTransactionsComplete(txStatuses: Array<{txHash: String}>) {
-    const cmd = 'DROP FROM transactions_tracked WHERE txHash = ?'
+    this.logger.info(`${txStatuses.length} transactions finished.`)
+    const cmd = 'DELETE FROM transactions_tracked WHERE txHash = ?'
     return Promise.all(txStatuses.map(
       txHash => dbRun(this.db, cmd, [txHash])))
   }
@@ -174,21 +182,37 @@ export class SubdomainServer {
   }
 
   submitBatch() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.lock.writeLock((release) => {
+        this.logger.debug('Obtained lock, fetching queue.')
         this.fetchQueue()
           .then(queue => {
+            this.logger.info(`${queue.length} items in the queue.`)
+            if (queue.length === 0) {
+              return 'skipped-tx-submit'
+            }
             const update = makeUpdateZonefile(this.domainName, queue, 4096)
             const zonefile = update.zonefile
             const updatedFromQueue = update.submitted
+            this.logger.info(`${updatedFromQueue} items will be in this batch.`)
             return this.backupZonefile(zonefile)
               .then(() => submitUpdate(this.domainName, zonefile,
                                        this.ownerKey, this.paymentKey))
-              .then((txHash) => this.updateQueueStatus(updatedFromQueue, txHash))
+              .then((txHash) => {
+                this.logger.info(txHash)
+                return this.updateQueueStatus(updatedFromQueue, txHash)
+              })
               .then((txHash) => this.addTransactionToTrack(txHash, zonefile))
           })
-          .then(txHash => resolve(txHash))
-          .finally(() => release())
+          .then(txHash => {
+            this.logger.info(`Batch submitted in txid: ${txHash}`)
+            resolve(txHash)
+          })
+          .catch((err) => {
+            this.logger.error(`Failed to submit batch: ${err}`)
+            reject(err)
+          })
+          .then(() => release())
       }, { timeout: 1,
            timeoutCallback: () => {
              throw new Error('Failed to obtain lock')
@@ -198,11 +222,17 @@ export class SubdomainServer {
   }
 
   checkZonefiles() {
+    this.logger.info('Checking for outstanding transactions.')
     return dbAll(this.db, 'SELECT txHash, zonefile FROM transactions_tracked')
-      .then(entries => checkTransactions(entries))
+      .then(entries => {
+        this.logger.info(`${entries.length} outstanding transactions.`)
+        return checkTransactions(entries)
+      })
       .then(txStatuses => this.markTransactionsComplete(
         txStatuses.filter(x => x.status)))
       .catch((err) => {
+        this.logger.error(`Failure trying to publish zonefiles: ${err}`)
+        this.logger.error(err.stack)
         throw new Error(`Failed to check transaction status: ${err}`)
       })
   }

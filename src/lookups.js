@@ -1,8 +1,8 @@
-import bsk from 'blockstack'
+import { config as bskConfig } from 'blockstack'
 
 export function isSubdomainRegistered(fullyQualifiedAddress: String) {
   return new Promise((resolve, reject) => {
-    bsk.network.getNameInfo(fullyQualifiedAddress)
+    bskConfig.network.getNameInfo(fullyQualifiedAddress)
       .then(() => resolve(true))
       .catch((err) => {
         if (err.message === 'Name not found') {

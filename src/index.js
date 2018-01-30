@@ -1,15 +1,17 @@
 import cors from 'cors'
 import express from 'express'
-import { SubdomainServer } from './server'
 import bodyParser from 'body-parser'
+import winston  from 'winston'
+
+import { config as bskConfig, network as bskNetwork } from 'blockstack'
+import { SubdomainServer } from './server'
+import { initializeBlockstackCore, PAYER_SK, OWNER_SK, DEVELOP_DOMAIN } from './developmode'
 
 const HEADERS = { 'Content-Type': 'application/json' }
 
-function makeServer(config) {
+function makeHTTPServer(config) {
   const app = express()
-  const server = new SubdomainServer(config.domainName,
-                                     config.ownerKey,
-                                     config.paymentKey)
+  const server = new SubdomainServer(config)
 
   app.use(cors())
   app.use(bodyParser.json())
@@ -22,6 +24,7 @@ function makeServer(config) {
   })
 
   app.post('/register', (req, res) => {
+    config.logger.info('Received a registration request')
     const requestJSON = req.body
     if (!requestJSON) {
       res.writeHead(409, HEADERS)
@@ -43,13 +46,56 @@ function makeServer(config) {
             + 'be included in the blockchain soon.' }))
         res.end()
       })
-      .catch(() => {
+      .catch((err) => {
+        config.logger.error(err)
         res.writeHead(409, HEADERS)
         res.write(JSON.stringify(
           { status: false,
             message: 'Failed to validate your registration request.' }))
         res.end()
       })
+  })
+
+  app.post('/issue_batch/', (req, res) => {
+    const authHeader = req.headers.authorization
+    if (!authHeader || authHeader !== `bearer ${config.adminPassword}`) {
+      res.writeHead(401, HEADERS)
+      res.write(JSON.stringify(
+        { status: false,
+          message: 'Unauthorized' }))
+      res.end()
+    } else {
+      server.submitBatch()
+        .catch(() => config.logger.error('Failed to broadcast batch.'))
+      res.writeHead(202, HEADERS)
+      res.write(JSON.stringify(
+        {
+          status: true,
+          message: 'Starting batch.'
+        }))
+      res.end()
+    }
+  })
+
+  app.post('/check_zonefiles/', (req, res) => {
+    const authHeader = req.headers.authorization
+    if (!authHeader || authHeader !== `bearer ${config.adminPassword}`) {
+      res.writeHead(401, HEADERS)
+      res.write(JSON.stringify(
+        { status: false,
+          message: 'Unauthorized' }))
+      res.end()
+    } else {
+      server.checkZonefiles()
+        .catch(() => config.logger.error('Failed to check our zonefiles.'))
+      res.writeHead(202, HEADERS)
+      res.write(JSON.stringify(
+        {
+          status: true,
+          message: 'Checking zonefiles.'
+        }))
+      res.end()
+    }
   })
 
   app.get('/status/:subdomain', (req, res) => {
@@ -75,12 +121,43 @@ function makeServer(config) {
       })
   })
 
-  return app
+  return server.initializeServer()
+    .then(() => app)
 }
 
+const config = {
+  logger: new winston.Logger({ transports: [
+    new winston.transports.Console({
+      level: 'info',
+      handleExceptions: false,
+      timestamp: true,
+      stringify: true,
+      colorize: true,
+      json: false
+    })
+  ] }),
+  domainName: DEVELOP_DOMAIN,
+  ownerKey: OWNER_SK,
+  paymentKey: PAYER_SK,
+  dbLocation: '/tmp/subdomain_registrar.db',
+  adminPassword: 'tester129',
+  development: true
+}
 
-const server = makeServer()
+let initializationPromise = makeHTTPServer(config)
 
-server.listen(3000, () => {
-  console.log('Subdomain registrar started')
-})
+if (config.development) {
+  bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST
+  initializationPromise = initializationPromise.then(
+    (server) => {
+      return initializeBlockstackCore(config.logger)
+        .then(() => server)
+    })
+}
+
+initializationPromise
+  .then((server) => {
+    server.listen(3000, () => {
+      console.log('Subdomain registrar started')
+    })
+  })
