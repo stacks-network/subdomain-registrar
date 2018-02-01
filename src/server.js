@@ -64,12 +64,16 @@ function dbAll(db: Object, cmd: String, args?: Array) {
 export class SubdomainServer {
   constructor(config: {domainName: String, ownerKey: String,
                        paymentKey: String, logger: Object,
-                       dbLocation: String}) {
+                       dbLocation: String, domainUri: String}) {
     this.logger = config.logger
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
     this.dbLocation = config.dbLocation
+    this.uriEntry = { name: '_http._tcp',
+                      target: config.domainUri,
+                      priority: 10,
+                      weight: 1 }
     this.lock = new ReadWriteLock()
   }
 
@@ -191,7 +195,7 @@ export class SubdomainServer {
             if (queue.length === 0) {
               return 'skipped-tx-submit'
             }
-            const update = makeUpdateZonefile(this.domainName, queue, 4096)
+            const update = makeUpdateZonefile(this.domainName, this.uriEntry, queue, 4096)
             const zonefile = update.zonefile
             const updatedFromQueue = update.submitted
             this.logger.info(`${updatedFromQueue} items will be in this batch.`)

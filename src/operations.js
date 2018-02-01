@@ -10,6 +10,8 @@ export type SubdomainOp = {
   signature?: String
 }
 
+const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
+
 function destructZonefile(zonefile: String) {
   const encodedZonefile = Buffer.from(zonefile)
         .toString('base64')
@@ -45,18 +47,21 @@ function subdomainOpToZFPieces(operation: SubdomainOp) {
 
 export function makeUpdateZonefile(
   domainName: String,
+  uriEntry: {name: String, target: String, priority: Number, weight: Number},
   updates: Array<SubdomainOp>,
   maxZonefileBytes: number) {
   const subdomainRecs = []
   const zonefileObject = { $origin: domainName,
                            $ttl: 3600,
+                           uri: [uriEntry],
                            txt: subdomainRecs }
   const submitted = []
   let outZonefile = makeZoneFile(zonefileObject,
-                                 '{$origin}\n{$ttl}\n{txt}\n{uri}\n')
+                                 ZONEFILE_TEMPLATE)
   for (let i = 0; i < updates.length; i++) {
     subdomainRecs.push(subdomainOpToZFPieces(updates[i]))
-    const newZonefile = makeZoneFile(zonefileObject)
+    const newZonefile = makeZoneFile(zonefileObject,
+                                     ZONEFILE_TEMPLATE)
     if (newZonefile.length < maxZonefileBytes) {
       outZonefile = newZonefile
       submitted.push(updates[i].subdomainName)

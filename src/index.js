@@ -141,6 +141,7 @@ const config = {
   paymentKey: PAYER_SK,
   dbLocation: '/tmp/subdomain_registrar.db',
   adminPassword: 'tester129',
+  domainUri: 'file:///tmp/whatever',
   development: true
 }
 

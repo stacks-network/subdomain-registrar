@@ -1,10 +1,22 @@
 import { exec } from 'child_process'
-import util from 'util'
-const pExec = util.promisify(exec)
 
 export const PAYER_SK = 'bb68eda988e768132bc6c7ca73a87fb9b0918e9a38d3618b74099be25f7cab7d01'
 export const OWNER_SK = '8f87d1ea26d03259371675ea3bd31231b67c5df0012c205c154764a124f5b8fe01'
 export const DEVELOP_DOMAIN = 'foo.id'
+
+function pExec(cmd) {
+  return new Promise(
+    (resolve, reject) => {
+      exec(cmd, function (err, stdout, stderr) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(stdout, stderr)
+        }
+      })
+    })
+}
+
 
 export function initializeBlockstackCore(logger: Object, forceRestart: ?Boolean = false,
                                          dockerTag: ?String = null) {
