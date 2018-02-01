@@ -22,7 +22,6 @@ export function makeHTTPServer(config) {
   })
 
   app.post('/register', (req, res) => {
-    logger.info('Received a registration request')
     const requestJSON = req.body
     if (!requestJSON) {
       res.writeHead(409, HEADERS)

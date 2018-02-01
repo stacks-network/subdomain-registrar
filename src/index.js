@@ -1,41 +1,30 @@
 import winston  from 'winston'
 
-import { config as bskConfig, network as bskNetwork } from 'blockstack'
 import { initializeBlockstackCore, PAYER_SK, OWNER_SK, DEVELOP_DOMAIN } from './developmode'
 import { makeHTTPServer } from './http'
+import { getConfig } from './config'
 
-const config = {
-  logger: { transports: [
-    new winston.transports.Console({
-      level: 'info',
-      handleExceptions: false,
-      timestamp: true,
-      stringify: true,
-      colorize: true,
-      json: false
-    })
-  ] },
-  domainName: DEVELOP_DOMAIN,
-  ownerKey: OWNER_SK,
-  paymentKey: PAYER_SK,
-  batchDelayPeriod: 0.5,
-  checkTransactionPeriod: 0.1,
-  dbLocation: '/tmp/subdomain_registrar.db',
-  adminPassword: 'tester129',
-  domainUri: 'file:///tmp/whatever',
-  development: true
-}
+const config = getConfig()
 
-winston.configure(config.logger)
+winston.configure(config.winstonConfig)
 
 let initializationPromise = makeHTTPServer(config)
+    .catch((err) => {
+      winston.error(err)
+      winston.error(err.stack)
+      throw err
+    })
 
 if (config.development) {
-  bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST
   initializationPromise = initializationPromise.then(
     (server) => {
-      return initializeBlockstackCore(winston)
+      return initializeBlockstackCore()
         .then(() => server)
+    })
+    .catch((err) => {
+      winston.error(err)
+      winston.error(err.stack)
+      throw err
     })
 }
 

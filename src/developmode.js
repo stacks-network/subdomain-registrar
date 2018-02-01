@@ -1,3 +1,5 @@
+import { config as bskConfig, network as bskNetwork } from 'blockstack'
+import logger from 'winston'
 import { exec } from 'child_process'
 
 export const PAYER_SK = 'bb68eda988e768132bc6c7ca73a87fb9b0918e9a38d3618b74099be25f7cab7d01'
@@ -18,8 +20,10 @@ function pExec(cmd) {
 }
 
 
-export function initializeBlockstackCore(logger: Object, forceRestart: ?Boolean = false,
+export function initializeBlockstackCore(forceRestart: ?Boolean = false,
                                          dockerTag: ?String = null) {
+  bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST
+
   if (!dockerTag) {
     dockerTag = 'blockstack-regtester'
   }
