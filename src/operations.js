@@ -37,7 +37,7 @@ function subdomainOpToZFPieces(operation: SubdomainOp) {
   destructedZonefile.forEach(
     (zfPart, ix) => txt.push(`zf${ix}=${zfPart}`))
 
-  if (operation.hasOwnProperty('signature')) {
+  if (operation.signature) {
     txt.push(`sig=${operation.signature}`)
   }
 
