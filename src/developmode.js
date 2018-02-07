@@ -28,7 +28,7 @@ export function initializeBlockstackCore(forceRestart: ?Boolean = false,
     dockerTag = 'blockstack-regtester'
   }
   logger.info('Initializing regtest environment')
-  const priorVersionRunning = pExec(`docker ps | grep -q test-bsk-core`)
+  const priorVersionRunning = pExec('docker ps | grep -q test-bsk-core')
         .then(() => {
           logger.info('Prior docker container running.')
           if (forceRestart) {
@@ -67,7 +67,7 @@ export function initializeBlockstackCore(forceRestart: ?Boolean = false,
     })
 }
 
-function shutdownBlockstackCore() {
+export function shutdownBlockstackCore() {
   return pExec('docker stop test-bsk-core')
 }
 

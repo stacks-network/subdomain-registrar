@@ -1,4 +1,5 @@
 import sqlite3 from 'sqlite3'
+import logger from 'winston'
 
 const CREATE_QUEUE = `CREATE TABLE subdomain_queue (
  queue_ix INTEGER PRIMARY KEY,
@@ -60,31 +61,48 @@ function dbAll(db: Object, cmd: String, args?: Array) {
 
 
 export class RegistrarQueueDB {
-  constructor(dbLocation: String, logger: Object) {
+  constructor(dbLocation: String) {
     this.dbLocation = dbLocation
-    this.logger = logger
   }
 
   initialize() {
       return new Promise((resolve, reject) => {
       this.db = new sqlite3.Database(this.dbLocation, sqlite3.OPEN_READWRITE, (errOpen) => {
         if (errOpen) {
-          this.logger.warn(`No database found ${this.dbLocation}, creating`)
+          logger.warn(`No database found ${this.dbLocation}, creating`)
           this.db = new sqlite3.Database(
             this.dbLocation, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (errCreate) => {
               if (errCreate) {
                 reject(`Failed to load database ${this.dbLocation}`)
               } else {
-                this.logger.warn('Creating tables...')
+                logger.warn('Creating tables...')
                 this.createTables()
                   .then(() => resolve())
               }
             })
         } else {
-          resolve()
+          this.tablesExist()
+            .then( exist => {
+              if (exist) {
+                return Promise.resolve()
+              } else {
+                return this.createTables()
+              }
+            })
+            .then(() => resolve())
         }
       })
     })
+  }
+
+  tablesExist() {
+    return dbAll(this.db, 'SELECT name FROM sqlite_master WHERE type = "table"')
+      .then( results => {
+        const tables = results.map( x => x.name )
+        return tables.indexOf('subdomain_queue') >= 0 &&
+          tables.indexOf('subdomain_zonefile_backups') >= 0 &&
+          tables.indexOf('transactions_tracked') >= 0
+      })
   }
 
   createTables() {
@@ -104,11 +122,11 @@ export class RegistrarQueueDB {
     return dbRun(this.db, dbCmd, dbArgs)
   }
 
-  updateStatusFor(subdomains: Array<String>, status: String, status_more: String) {
+  updateStatusFor(subdomains: Array<String>, status: String, statusMore: String) {
     const cmd = 'UPDATE subdomain_queue SET status = ?, status_more = ? WHERE subdomainName = ?'
     return Promise.all(subdomains.map(
-      name => dbRun(this.db, cmd, [status, status_more, name])))
-      .then(() => status_more)
+      name => dbRun(this.db, cmd, [status, statusMore, name])))
+      .then(() => statusMore)
   }
 
   fetchQueue() {

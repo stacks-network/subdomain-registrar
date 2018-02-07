@@ -7,8 +7,8 @@ import { RegistrarQueueDB } from './db'
 
 export class SubdomainServer {
   constructor(config: {domainName: String, ownerKey: String,
-                       paymentKey: String, logger: Object,
-                       dbLocation: String, domainUri: String}) {
+                       paymentKey: String, dbLocation: String,
+                       domainUri: String}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -16,7 +16,7 @@ export class SubdomainServer {
                       target: config.domainUri,
                       priority: 10,
                       weight: 1 }
-    this.db = new RegistrarQueueDB(config.dbLocation, config.logger)
+    this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new ReadWriteLock()
   }
 
@@ -75,9 +75,9 @@ export class SubdomainServer {
                 return { status:
                    'Subdomain is queued for update and should be' +
                          ' announced within the next few blocks.' }
-              } else if (statusRecord.statusRecord == 'submitted') {
+              } else if (statusRecord.status == 'submitted') {
                 return { status:
-                         `Your subdomain was registered in transaction ${statusRecord.statu_more}` +
+                         `Your subdomain was registered in transaction ${statusRecord.status_more}` +
                          ' -- it should propagate on the network once it has 6 confirmations.' }
               } else {
                 return { status: statusRecord.status }
@@ -178,7 +178,7 @@ export class SubdomainServer {
           .then(() => release())
       }, { timeout: 1,
            timeoutCallback: () => {
-             logger.error(`Batch submission failed: could not obtain lock.`)
+             logger.error('Batch submission failed: could not obtain lock.')
              reject(new Error('Failed to obtain lock'))
            }
          })

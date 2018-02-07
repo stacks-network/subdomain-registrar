@@ -1,6 +1,6 @@
 import winston  from 'winston'
 
-import { initializeBlockstackCore, PAYER_SK, OWNER_SK, DEVELOP_DOMAIN } from './developmode'
+import { initializeBlockstackCore } from './developmode'
 import { makeHTTPServer } from './http'
 import { getConfig } from './config'
 

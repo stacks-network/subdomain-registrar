@@ -12,7 +12,7 @@ export type SubdomainOp = {
 
 const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
 
-function destructZonefile(zonefile: String) {
+export function destructZonefile(zonefile: String) {
   const encodedZonefile = Buffer.from(zonefile)
         .toString('base64')
   // we pack into 250 byte strings -- the entry "zf99=" eliminates 5 useful bytes,
@@ -29,7 +29,7 @@ function destructZonefile(zonefile: String) {
   return destructed
 }
 
-function subdomainOpToZFPieces(operation: SubdomainOp) {
+export function subdomainOpToZFPieces(operation: SubdomainOp) {
   const destructedZonefile = destructZonefile(operation.zonefile)
   const txt = [`owner=${operation.owner}`,
                `seqn=${operation.sequenceNumber}`,
