@@ -30,7 +30,7 @@ if (config.development) {
 
 initializationPromise
   .then((server) => {
-    server.listen(3000, () => {
+    server.listen(config.port, () => {
       console.log('Subdomain registrar started')
     })
   })

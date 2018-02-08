@@ -8,10 +8,11 @@ import { RegistrarQueueDB } from './db'
 export class SubdomainServer {
   constructor(config: {domainName: String, ownerKey: String,
                        paymentKey: String, dbLocation: String,
-                       domainUri: String}) {
+                       domainUri: String, zonefileSize: Number}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
+    this.zonefileSize = config.zonefileSize
     this.uriEntry = { name: '_http._tcp',
                       target: config.domainUri,
                       priority: 10,
@@ -149,7 +150,8 @@ export class SubdomainServer {
               return null
             }
             logger.info(`${queue.length} items in the queue.`)
-            const update = makeUpdateZonefile(this.domainName, this.uriEntry, queue, 4096)
+            const update = makeUpdateZonefile(this.domainName, this.uriEntry,
+                                              queue, this.zonefileSize)
             const zonefile = update.zonefile
             const updatedFromQueue = update.submitted
             logger.info(`${updatedFromQueue} items will be in this batch.`)

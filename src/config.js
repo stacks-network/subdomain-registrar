@@ -19,10 +19,32 @@ const configDevelopDefaults = {
   dbLocation: '/tmp/subdomain_registrar.db',
   adminPassword: 'tester129',
   domainUri: 'file:///tmp/whatever',
-  development: true
+  zonefileSize: 4096,
+  development: true,
+  port: 3000
 }
 
 const configDefaults = {
+  winstonConsoleTransport: {
+      level: 'info',
+      handleExceptions: false,
+      timestamp: true,
+      stringify: true,
+      colorize: true,
+      json: false
+  },
+  domainName: null,
+  ownerKey: null,
+  paymentKey: null,
+  // submit batch (if has updates) every 15 minutes
+  batchDelayPeriod: 15,
+  // check if zonefiles can be broadcasted every 5 minutes
+  checkTransactionPeriod: 5,
+  zonefileSize: 4096,
+  dbLocation: '/root/subdomain_registrar.db',
+  adminPassword: 'NEEDS-A-PASSWORD',
+  domainUri: 'https://registrar.whatever.com',
+  port: 3000
 }
 
 
@@ -34,6 +56,12 @@ export function getConfig() {
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
     const configFile = process.env.BSK_SUBDOMAIN_CONFIG
     Object.assign(config, JSON.parse(fs.readFileSync(configFile)))
+  }
+  if (process.env.BSK_SUBDOMAIN_PAYMENT_KEY) {
+    config.paymentKey = process.env.BSK_SUBDOMAIN_PAYMENT_KEY
+  }
+  if (process.env.BSK_SUBDOMAIN_OWNER_KEY) {
+    config.ownerKey = process.env.BSK_SUBDOMAIN_OWNER_KEY
   }
 
   config.winstonConfig = { transports: [

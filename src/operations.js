@@ -1,5 +1,6 @@
 import { transactions, config as bskConfig } from 'blockstack'
 import { makeZoneFile } from 'zone-file'
+import logger from 'winston'
 
 export type SubdomainOp = {
   owner: String,
@@ -56,6 +57,10 @@ export function makeUpdateZonefile(
                            uri: [uriEntry],
                            txt: subdomainRecs }
   const submitted = []
+
+  logger.debug('Constructing zonefile: ')
+  logger.debug(zonefileObject)
+
   let outZonefile = makeZoneFile(zonefileObject,
                                  ZONEFILE_TEMPLATE)
   for (let i = 0; i < updates.length; i++) {
@@ -93,13 +98,89 @@ Promise<Array<{txHash: String, status: Boolean}>> {
       blockHeight => Promise.all(txs.map(
         tx => bskConfig.network.getTransactionInfo(tx.txHash)
           .then(txInfo => {
-            if (txInfo.block_height + 10 > blockHeight) {
+            if (! txInfo.block_height) {
+              logger.info(`Failed to get block_height for ${tx.txHash} --- probably still unconfirmed.`)
+              return Promise.resolve({ txHash: tx.txHash, status: false })
+            } else if (txInfo.block_height + 6 > blockHeight) {
+              logger.debug(`block_height for ${tx.txHash}: ${txInfo.block_height} --- has ${1 + blockHeight - txInfo.block_height} confirmations`)
               return Promise.resolve({ txHash: tx.txHash, status: false })
             } else {
-              return bskConfig.network.publishZonefile(tx.zonefile)
-                .then(() => ({ txHash: tx.txHash, status: true }))
+              if (bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org') {
+                return directlyPublishZonefile(tx.zonefile)
+                  // this is horrible. I know. but the reasons have to do with load balancing
+                  // on node.blockstack.org and Atlas peering.
+                  .then(() => directlyPublishZonefile(tx.zonefile))
+                  .then(() => directlyPublishZonefile(tx.zonefile))
+                  .then(() => directlyPublishZonefile(tx.zonefile))
+                  .then(() => directlyPublishZonefile(tx.zonefile))
+                  .then(() => directlyPublishZonefile(tx.zonefile))
+                  .then(() => ({ txHash: tx.txHash, status: true }))
+              } else {
+                return bskConfig.network.publishZonefile(tx.zonefile)
+                  .then(() => ({ txHash: tx.txHash, status: true }))
+              }
             }
+          })
+          .catch(err => {
+            logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
+            return Promise.resolve({ txHash: tx.txHash, status: false})
           })
       ))
     )
+}
+
+// this is a hack -- this is a stand-in while we roll out support for
+//   publishing zonefiles via core.blockstack
+export function directlyPublishZonefile(zonefile: string) {
+  // speak directly to node.blockstack
+
+  const b64Zonefile = Buffer.from(zonefile).toString('base64')
+
+  const postData = '<?xml version=\'1.0\'?>' +
+        '<methodCall><methodName>put_zonefiles</methodName>' +
+        `<params><param><array><data><value>
+         <string>${b64Zonefile}</string></value>
+         </data></array></param></params>` +
+        '</methodCall>'
+  return fetch('https://node.blockstack.org:6263/RPC2',
+               { method: 'POST',
+                 body: postData })
+    .then(resp => {
+      if (resp.status >= 200 && resp.status <= 299){
+        return resp.text()
+      } else {
+        logger.error(`Publish zonefile error: Response code from node.blockstack: ${resp.status}`)
+        resp.text().then(
+          (text) => logger.error(`Publish zonefile error: Response from node.blockstack: ${resp.text()}`))
+        throw new Error('Failed to publish zonefile. Bad response from node.blockstack')
+      }
+    })
+    .then(respText => {
+      const start = respText.indexOf('<string>') + '<string>'.length
+      const stop = respText.indexOf('</string>')
+      const dataResp = respText.slice(start, stop)
+      let jsonResp
+      try {
+        jsonResp = JSON.parse(dataResp)
+      } catch (err) {
+        logger.error(`Failed to parse JSON response from node.blockstack: ${respText}`)
+        throw err
+      }
+      if ('error' in jsonResp) {
+        logger.error(`Error in publishing zonefile: ${JSON.stringify(jsonResp)}`)
+        throw new Error(jsonResp.error)
+      }
+
+      if (!jsonResp.saved || jsonResp.saved.length < 1) {
+        throw new Error('Invalid "saved" response from node.blockstack')
+      }
+
+      if (jsonResp.saved[0] === 1) {
+        return true
+      } else if (jsonResp.saved[0] === 0) {
+        throw new Error('Zonefile not saved')
+      }
+
+      throw new Error('Invalid "saved" response from node.blockstack')
+    })
 }
