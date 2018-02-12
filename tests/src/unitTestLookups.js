@@ -39,16 +39,25 @@ export function unitTestLookups() {
   })
 
   test('handle failure of subdomain lookup', (t) => {
-    t.plan(1)
+    t.plan(2)
 
     nock.cleanAll()
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
+      .reply(510, {})
+
+    nock.cleanAll()
+    nock('https://core.blockstack.org')
+      .get('/v1/names/good.bar.id')
       .reply(500, {})
 
     isSubdomainRegistered('foo.bar.id')
       .then(() => t.ok(false))
       .catch(() => t.ok(true))
+
+    isSubdomainRegistered('good.bar.id')
+      .then((registered) => t.ok(!registered, 'good.bar.id should return as not registered'))
+      .catch(() => t.ok(false, '500 errors should correspond to unregistered subdomain'))
   })
 
   test('isRegistrationValid', (t) => {
@@ -76,7 +85,7 @@ export function unitTestLookups() {
     isRegistrationValid('foo', 'bar.id', testAddress, 0)
       .then(x => t.ok(!x, 'must not already exist'))
     isRegistrationValid('car', 'bar.id', testAddress, 0)
-      .then(x => t.ok(!x, 'must not raise error in subdomain existence check'))
+      .then(x => t.ok(x, 'must not raise error in subdomain existence check'))
     isRegistrationValid('bar', 'bar.id', testAddress, 0)
       .then(x => t.ok(x, 'everything is cool'))
   })

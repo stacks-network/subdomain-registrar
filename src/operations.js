@@ -1,6 +1,7 @@
-import { transactions, config as bskConfig } from 'blockstack'
+import { transactions, config as bskConfig, safety, hexStringToECPair } from 'blockstack'
 import { makeZoneFile } from 'zone-file'
 import logger from 'winston'
+import fetch from 'node-fetch'
 
 export type SubdomainOp = {
   owner: String,
@@ -84,10 +85,14 @@ export function submitUpdate(
   zonefile: String,
   ownerKey: String,
   paymentKey: String) {
-  return transactions.makeUpdate(domainName,
-                                 ownerKey,
-                                 paymentKey,
-                                 zonefile)
+  const ownerAddress = hexStringToECPair(ownerKey).getAddress()
+  return safety.ownsName(domainName, ownerAddress)
+    .then((ownsName) => {
+      if (!ownsName) {
+        throw new Error(`Domain name ${domainName} not owned by address ${ownerAddress}`)
+      }
+      return transactions.makeUpdate(domainName, ownerKey, paymentKey, zonefile)
+    })
     .then(txHex => bskConfig.network.broadcastTransaction(txHex))
 }
 
@@ -109,10 +114,6 @@ Promise<Array<{txHash: String, status: Boolean}>> {
                 return directlyPublishZonefile(tx.zonefile)
                   // this is horrible. I know. but the reasons have to do with load balancing
                   // on node.blockstack.org and Atlas peering.
-                  .then(() => directlyPublishZonefile(tx.zonefile))
-                  .then(() => directlyPublishZonefile(tx.zonefile))
-                  .then(() => directlyPublishZonefile(tx.zonefile))
-                  .then(() => directlyPublishZonefile(tx.zonefile))
                   .then(() => directlyPublishZonefile(tx.zonefile))
                   .then(() => ({ txHash: tx.txHash, status: true }))
               } else {
@@ -151,7 +152,7 @@ export function directlyPublishZonefile(zonefile: string) {
       } else {
         logger.error(`Publish zonefile error: Response code from node.blockstack: ${resp.status}`)
         resp.text().then(
-          (text) => logger.error(`Publish zonefile error: Response from node.blockstack: ${resp.text()}`))
+          (text) => logger.error(`Publish zonefile error: Response from node.blockstack: ${text}`))
         throw new Error('Failed to publish zonefile. Bad response from node.blockstack')
       }
     })

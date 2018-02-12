@@ -154,7 +154,7 @@ export class SubdomainServer {
                                               queue, this.zonefileSize)
             const zonefile = update.zonefile
             const updatedFromQueue = update.submitted
-            logger.info(`${updatedFromQueue} items will be in this batch.`)
+            logger.info(`[${updatedFromQueue}] will be in this batch.`)
             return this.backupZonefile(zonefile)
               .then(() => submitUpdate(this.domainName, zonefile,
                                        this.ownerKey, this.paymentKey))

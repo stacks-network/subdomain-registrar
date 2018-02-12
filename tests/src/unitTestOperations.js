@@ -80,6 +80,10 @@ export function unitTestOperations() {
       .get('/v1/blockchains/bitcoin/consensus')
       .reply(200, { consensus_hash: 'dfe87cfd31ffa2a3b8101e3e93096f2b' })
 
+    nock('https://core.blockstack.org')
+      .get('/v1/names/bar.id')
+      .reply(200, { address: '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq' })
+
     submitUpdate('bar.id', 'hello world',
                  testSK, testSK)
       .then(x => t.equal(x, 'a095def773f3f5db1685406c559bd3fd46822285d875a0e8bae64e31da3874e6'))
@@ -89,13 +93,18 @@ export function unitTestOperations() {
     t.plan(1)
 
     let txs = [{hash: 'txhash-0', height: 289},
-               {hash: 'txhash-1', height: 290},
-               {hash: 'txhash-2', height: 291}]
+               {hash: 'txhash-1', height: 294},
+               {hash: 'txhash-2', height: 295}]
         .map(x => ({ zonefile: 'hello world',
                      txHash: x.hash,
                      blockheight: x.height }))
 
     nock.cleanAll()
+
+    nock('https://node.blockstack.org:6263')
+      .persist()
+      .post('/RPC2')
+      .reply(200, '<string>{"saved": [1]}</string>')
 
     nock('https://blockchain.info')
       .persist()
@@ -152,7 +161,7 @@ export function unitTestOperations() {
                                      updatesArray2, maxZonefileBytes)
 
     t.deepEqual(update1.submitted, ['foo-0'], 'expect only 1 submission')
-    t.deepEqual(update2.submitted, [0,1,2,3,4,5,6,7,8].map(x => `${subdomainName}-${x}`),
+    t.deepEqual(update2.submitted, [0,1,2,3,4,5,6,7].map(x => `${subdomainName}-${x}`),
                 'expect fewer submitted than the whole set')
 
     t.ok(Buffer.from(update2.zonefile, 'ascii').length < 1000,
@@ -164,7 +173,7 @@ export function unitTestOperations() {
     t.deepEqual(parsed1.txt.map(rec => rec.name), ['foo-0'],
                 'outputted txt records should match expected subdomains')
     t.deepEqual(parsed2.txt.map(rec => rec.name),
-                [0,1,2,3,4,5,6,7,8].map(x => `${subdomainName}-${x}`),
+                [0,1,2,3,4,5,6,7].map(x => `${subdomainName}-${x}`),
                 'outputted txt records should match expected subdomains')
 
   })
