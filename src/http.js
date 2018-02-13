@@ -29,6 +29,7 @@ export function makeHTTPServer(config) {
         { status: false,
           message: 'Failed to parse your registration request: expected JSON' }))
       res.end()
+      return
     }
 
     server.queueRegistration(requestJSON.name,
