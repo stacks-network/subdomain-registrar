@@ -49,7 +49,7 @@
     "email": "admin@blockstack.com",
     "url": "https://blockstack.com"
   },
-  "license": "GPL-3.0",
+  "license": "MIT",
   "contributors": [
     {
       "name": "Aaron Blankstein"
