@@ -1,0 +1,62 @@
+{
+  "name": "blockstack-subdomain-registrar",
+  "version": "0.1.0",
+  "description": "A subdomain registrar for Blockstack",
+  "main": "lib/index.js",
+  "dependencies": {
+    "blockstack": "^0.15.0",
+    "cors": "^2.8.4",
+    "express": "^4.16.2",
+    "node-fetch": "^2.0.0",
+    "rwlock": "^5.0.0",
+    "sqlite3": "^3.1.13",
+    "winston": "^2.4.0",
+    "zone-file": "^0.2.3"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.0.0",
+    "babel-eslint": "^6.0.4",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-flow": "^6.23.0",
+    "eslint": "^2.10.2",
+    "eslint-plugin-import": "^1.8.1",
+    "flow-bin": "^0.49.1",
+    "nock": "^9.1.6",
+    "nyc": "^11.4.1",
+    "tape": "^4.6.3",
+    "tape-istanbul": "^1.2.0"
+  },
+  "scripts": {
+    "start": "npm run build && node lib/index.js",
+    "build": "babel src -d lib",
+    "flow": "flow",
+    "lint": "eslint src",
+    "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",
+    "test-inner": "npm run compile-tests && node tests/lib/index.js",
+    "test": "nyc --reporter=text npm run test-inner"
+  },
+  "nyc": {
+    "include": [
+      "lib/**"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kantai/subdomain-registrar.git"
+  },
+  "author": {
+    "name": "Blockstack PBC",
+    "email": "admin@blockstack.com",
+    "url": "https://blockstack.com"
+  },
+  "license": "MIT",
+  "contributors": [
+    {
+      "name": "Aaron Blankstein"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/kantai/subdomain-registrar/issues"
+  },
+  "homepage": "https://github.com/kantai/subdomain-registrar#readme"
+}

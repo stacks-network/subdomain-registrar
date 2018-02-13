@@ -1,0 +1,17 @@
+{
+  "ownerKey": "YOUR-OWNER-KEY",
+  "paymentKey": "YOUR-PAYMENT-KEY",
+  "domainUri": "https://gaia.blockstack.org/hub/1M3325hr1utdv4HhSAfvYKhapzPP9Axhde/profile.json",
+  "dbLocation": "/root/subdomain_registrar.db",
+  "domainName": "domain.id",
+  "adminPassword": "ADMIN-PASSWORD",
+  "port": 3000,
+  "winstonConsoleTransport": {
+      "level": "info",
+      "handleExceptions": false,
+      "timestamp": true,
+      "stringify": true,
+      "colorize": true,
+      "json": false
+  }
+}
