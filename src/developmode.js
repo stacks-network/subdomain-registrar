@@ -19,11 +19,12 @@ function pExec(cmd) {
     })
 }
 
+export function configureRegtest() {
+  bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST
+}
 
 export function initializeBlockstackCore(forceRestart: ?Boolean = false,
                                          dockerTag: ?String = null) {
-  bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST
-
   if (!dockerTag) {
     dockerTag = 'blockstack-regtester'
   }

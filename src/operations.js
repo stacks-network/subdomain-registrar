@@ -117,7 +117,7 @@ Promise<Array<{txHash: String, status: Boolean}>> {
                   .then(() => directlyPublishZonefile(tx.zonefile))
                   .then(() => ({ txHash: tx.txHash, status: true }))
               } else {
-                return bskConfig.network.publishZonefile(tx.zonefile)
+                return bskConfig.network.broadcastZoneFile(tx.zonefile)
                   .then(() => ({ txHash: tx.txHash, status: true }))
               }
             }

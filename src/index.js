@@ -1,6 +1,6 @@
 import winston  from 'winston'
 
-import { initializeBlockstackCore } from './developmode'
+import { initializeBlockstackCore, configureRegtest } from './developmode'
 import { makeHTTPServer } from './http'
 import { getConfig } from './config'
 
@@ -14,6 +14,10 @@ let initializationPromise = makeHTTPServer(config)
       winston.error(err.stack)
       throw err
     })
+
+if (config.regtest) {
+  configureRegtest()
+}
 
 if (config.development) {
   initializationPromise = initializationPromise.then(

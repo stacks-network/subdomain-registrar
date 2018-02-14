@@ -20,8 +20,9 @@ const configDevelopDefaults = {
   adminPassword: 'tester129',
   domainUri: 'file:///tmp/whatever',
   zonefileSize: 4096,
-  development: true,
+  development: false,
   port: 3000
+  regtest: true
 }
 
 const configDefaults = {
@@ -51,6 +52,10 @@ const configDefaults = {
 export function getConfig() {
   let config = Object.assign({}, configDefaults)
   if (process.env.BSK_SUBDOMAIN_DEVELOP) {
+    config = Object.assign({}, configDevelopDefaults)
+    config.development = true
+  }
+  if (process.env.BSK_SUBDOMAIN_REGTEST) {
     config = Object.assign({}, configDevelopDefaults)
   }
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
