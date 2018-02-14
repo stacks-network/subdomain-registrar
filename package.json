@@ -42,7 +42,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kantai/subdomain-registrar.git"
+    "url": "git+https://github.com/blockstack/subdomain-registrar.git"
   },
   "author": {
     "name": "Blockstack PBC",
@@ -56,7 +56,7 @@
     }
   ],
   "bugs": {
-    "url": "https://github.com/kantai/subdomain-registrar/issues"
+    "url": "https://github.com/blockstack/subdomain-registrar/issues"
   },
-  "homepage": "https://github.com/kantai/subdomain-registrar#readme"
+  "homepage": "https://github.com/blockstack/subdomain-registrar#readme"
 }
