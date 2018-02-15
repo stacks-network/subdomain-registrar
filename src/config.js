@@ -21,7 +21,7 @@ const configDevelopDefaults = {
   domainUri: 'file:///tmp/whatever',
   zonefileSize: 4096,
   development: false,
-  port: 3000
+  port: 3000,
   regtest: true
 }
 
