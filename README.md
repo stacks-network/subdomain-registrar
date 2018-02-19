@@ -60,16 +60,35 @@ and then clear those after the process starts.
 
 # Running with Docker
 
-Build the docker image:
+First copy the config file into a data directory and modify it to suit your needs:
 
 ```bash
+mkdir -p data
+cp config-sample.json data/config.json
+vi config.json
+```
+
+Once that is done you can spin up the instance using docker-compose. The file will build the image as well:
+
+```bash
+docker-compose up -d 
+```
+
+If you would like to run w/o compose you can do the same with docker:
+
+```bash
+# First build the image
 docker build . --tag bsk-subdomain-registrar
+
+# Then run it with the proper volumes mounted
+docker run -d -v data:/root/ -e BSK_SUBDOMAIN_CONFIG=/root/config.json -p 3000:3000 bsk-subdomain-registrar
 ```
 
-You'll want to mount `/root/`, and pass a config file option:
+Root stores the sqlite database that the subdomain uses to queue registrations, and watch zonefiles for broadcasting. To test connectivity for this setup run the following curl command:
 
 ```bash
-docker run -d -v data:/root/ -e BSK_SUBDOMAIN_CONFIG=/root/my-config.json -p 3000:3000 bsk-subdomain-registrar
+$ curl http://localhost:3000/index | jq
+{
+  "status": true
+}
 ```
-
-Root stores the sqlite database that the subdomain uses to queue registrations, and watch zonefiles for broadcasting.
