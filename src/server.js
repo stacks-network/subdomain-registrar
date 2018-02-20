@@ -1,14 +1,15 @@
 import logger from 'winston'
 
 import { makeUpdateZonefile, submitUpdate, checkTransactions } from './operations'
-import { isRegistrationValid, isSubdomainRegistered } from './lookups'
+import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './lookups'
 import ReadWriteLock from 'rwlock'
 import { RegistrarQueueDB } from './db'
 
 export class SubdomainServer {
   constructor(config: {domainName: String, ownerKey: String,
                        paymentKey: String, dbLocation: String,
-                       domainUri: String, zonefileSize: Number}) {
+                       domainUri: String, zonefileSize: Number,
+                       ipLimit: Number, proofsRequired: Number}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -17,6 +18,9 @@ export class SubdomainServer {
                       target: config.domainUri,
                       priority: 10,
                       weight: 1 }
+
+    this.ipLimit = config.ipLimit
+    this.proofsRequired = config.proofsRequired
     this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new ReadWriteLock()
   }
@@ -25,7 +29,46 @@ export class SubdomainServer {
     return this.db.initialize()
   }
 
-  queueRegistration(subdomainName, owner, sequenceNumber, zonefile) {
+  spamCheck(subdomainName, owner, zonefile, ipAddress) {
+    return this.db.getOwnerAddressCount(owner)
+      .then((ownerCount) => {
+        if (ownerCount >= 1) {
+          return 'Owner already registered subdomain with this registrar.'
+        }
+        return false
+      })
+      .then((previous) => {
+        if (previous || this.ipLimit <= 0) {
+          return previous
+        }
+        return this.db.getIPAddressCount(ipAddress)
+          .then((ipCount) => {
+            if (ipCount >= this.ipLimit) {
+              return `IP address ${ipAddress} already registered ${ipCount} subdomains.`
+            }
+            return false
+          })
+      })
+      .then((previous) => {
+        if (previous || this.proofsRequired <= 0) {
+          return previous
+        }
+        return checkProofs(owner, zonefile)
+          .then((proofsCount) => {
+            if (proofsCount >= this.proofsRequired) {
+              return `Proofs are required: had ${proofsCount} valid, requires ${this.proofsRequired}`
+            }
+            return false
+          })
+          .catch((err) => {
+            logger.error(err)
+            return 'Proof validation failed'
+          })
+      })
+  }
+
+  queueRegistration(subdomainName, owner, sequenceNumber, zonefile,
+                    ipAddress?: String = '') {
     return this.isSubdomainInQueue(subdomainName)
       .then((inQueue) => {
         if (inQueue) {
@@ -42,10 +85,29 @@ export class SubdomainServer {
                            ' because it failed validation.')
           throw new Error('Requested subdomain operation is invalid.')
         }
+        return this.spamCheck(
+          subdomainName, owner, zonefile, ipAddress)
+      })
+      .then((spamFailure) => {
+        if (spamFailure) {
+          logger.warn(`${subdomainName} failed spam-check: ${spamFailure}`)
+          throw new Error(spamFailure)
+        }
+      })
+      .then(() => {
         return new Promise((resolve, reject) => {
           this.lock.writeLock((release) => {
             logger.debug('Obtained lock to register.')
             this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
+              .then(() => {
+                logger.info(`Logging requestor info (ip= ${ipAddress} owner=${owner}`)
+                return this.db.logRequestorData(subdomainName, owner, ipAddress)
+              })
+              .catch((err) => {
+                logger.error(`Setting status for ${subdomainName} as errored.`)
+                this.db.updateStatusFor([subdomainName], 'Error logging ip info', '')
+                throw err
+              })
               .then(() => {
                 logger.info(`Queued operation on ${subdomainName}: owner= ${owner}` +
                                  ` seqn= ${sequenceNumber} zf= ${zonefile}`)

@@ -32,10 +32,15 @@ export function makeHTTPServer(config) {
       return
     }
 
+    // note: x-real-ip is *only* trust-worthy when running behind a
+    //   proxy that the registrar controls!
+    const ipAddress = req.headers['x-real-ip'] || req.connection.remoteAddress
+
     server.queueRegistration(requestJSON.name,
                              requestJSON.owner_address,
                              0,
-                             requestJSON.zonefile)
+                             requestJSON.zonefile,
+                             ipAddress)
       .then(() => {
         res.writeHead(202, HEADERS)
         res.write(JSON.stringify(
@@ -46,10 +51,14 @@ export function makeHTTPServer(config) {
       })
       .catch((err) => {
         logger.error(err)
+        let message = 'Failed to validate your registration request.'
+        if (err.message.startsWith('Proof')) {
+          message = err.message
+        }
         res.writeHead(409, HEADERS)
         res.write(JSON.stringify(
           { status: false,
-            message: 'Failed to validate your registration request.' }))
+            message }))
         res.end()
       })
   })

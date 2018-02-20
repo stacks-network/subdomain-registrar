@@ -4,12 +4,14 @@ import nock from 'nock'
 import { SubdomainServer } from '../../lib/server'
 
 const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
+const testAddress2 = '1BUFjQVjkXpW5cSj1XZ8zh8XqeDVevjuLv'
+const testAddress3 = '1LmH1r8K62yZEjBtpbwU94yT3jLhLMiR1M'
 const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
 
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(7)
+    t.plan(9)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -24,6 +26,11 @@ export function testSubdomainServer() {
 
     nock('https://core.blockstack.org')
       .persist()
+      .get('/v1/names/car.bar.id')
+      .reply(404, {})
+
+    nock('https://core.blockstack.org')
+      .persist()
       .get('/v1/names/tar.bar.id')
       .reply(404, {})
 
@@ -31,27 +38,40 @@ export function testSubdomainServer() {
                                   ownerKey: testSK,
                                   paymentKey: testSK,
                                   dbLocation: ':memory:',
-                                  domainUri: 'http://myfreewebsite.com' })
+                                  domainUri: 'http://myfreewebsite.com',
+                                  ipLimit: 1,
+                                  proofsRequired: 0,
+                                  zonefileSize: 4096 })
     s.initializeServer()
       .then(
         () =>
-          s.queueRegistration('foo', testAddress, 0, 'hello-world')
+          s.queueRegistration('foo', testAddress, 0, 'hello-world', 'foo')
           .then(() => t.ok(false, 'foo.foo.id should not be a valid id to queue'))
           .catch((err) => {
             t.equal(err.message, 'Subdomain operation already queued for this name.',
                     'foo.foo.id should not be a valid id to queue') }))
       .then(
         () =>
-          s.queueRegistration('bar', 'm123', 0, 'hello-world')
+          s.queueRegistration('bar', 'm123', 0, 'hello-world', 'bar')
           .then(() => t.ok(false, 'should not queue with a bad address'))
           .catch((err) => t.equal(err.message, 'Requested subdomain operation is invalid.',
                                   'should not queue with a bad address')))
       .then(
         () =>
-          s.queueRegistration('bar', testAddress, 0, 'hello-world')
+          s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
           .then(() => t.ok(true, 'should queue bar.bar.id'))
           .catch((err) => { console.log(err.stack)
                             t.ok(false, 'should be able to queue bar.bar.id') }))
+      .then(
+        () =>
+          s.queueRegistration('car', testAddress, 0, 'hello-world', 'foo')
+          .then(() => t.ok(false, 'should not queue with a reused owner address'))
+          .catch((err) => t.ok(err.message.startsWith('Owner', 'should not queue with same owner address'))))
+      .then(
+        () =>
+          s.queueRegistration('car', testAddress2, 0, 'hello-world', 'foo')
+          .then(() => t.ok(false, 'should not queue with a reused ip address'))
+          .catch((err) => t.ok(err.message.startsWith('IP', 'should not queue with same IP address'))))
       .then(
         () =>
           s.getSubdomainStatus('bar')
@@ -131,6 +151,8 @@ export function testSubdomainServer() {
                                   ownerKey: testSK,
                                   paymentKey: testSK,
                                   dbLocation: ':memory:',
+                                  ipLimit: 0,
+                                  proofsRequired: 0,
                                   zonefileSize: 4096,
                                   domainUri: 'http://myfreewebsite.com' })
     s.initializeServer()
@@ -142,7 +164,7 @@ export function testSubdomainServer() {
           .then(() => t.ok(true, 'foo.foo.id should be queued')))
       .then(
         () =>
-          s.queueRegistration('bar', testAddress, 0, 'hello-world')
+          s.queueRegistration('bar', testAddress2, 0, 'hello-world')
           .then(() => t.ok(true, 'should queue bar.bar.id')))
       .then(() => {
         // make it so that foo.bar.id is now *not* valid to register
@@ -231,6 +253,8 @@ export function testSubdomainServer() {
                                   paymentKey: testSK,
                                   dbLocation: ':memory:',
                                   zonefileSize: 4096,
+                                  ipLimit: 0,
+                                  proofsRequired: 0,
                                   domainUri: 'http://myfreewebsite.com' })
     s.initializeServer()
       .then(() => s.submitBatch())
@@ -241,7 +265,7 @@ export function testSubdomainServer() {
           .then(() => t.ok(true, 'foo.foo.id should be queued')))
       .then(
         () =>
-          s.queueRegistration('bar', testAddress, 0, 'hello-world')
+          s.queueRegistration('bar', testAddress2, 0, 'hello-world')
           .then(() => t.ok(true, 'should queue bar.bar.id')))
       .then(() => {
         // make it so that foo.bar.id is now *not* valid to register

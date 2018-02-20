@@ -28,6 +28,15 @@ const CREATE_TRANSACTIONS_TRACKED = `CREATE TABLE transactions_tracked (
  zonefile TEXT NOT NULL
 );`
 
+const CREATE_IP_INFO = `CREATE TABLE ip_info (
+ ipinfo_ix INTEGER PRIMARY KEY,
+ ip_address TEXT NOT NULL,
+ owner TEXT NOT NULL,
+ queue_ix INTEGER NOT NULL
+);`
+
+const CREATE_IP_INFO_INDEX = `CREATE INDEX ip_info_index ON
+ ip_info (ip_address);`
 
 function dbRun(db: Object, cmd: String, args?: Array) {
   if (!args) {
@@ -76,38 +85,55 @@ export class RegistrarQueueDB {
                 reject(`Failed to load database ${this.dbLocation}`)
               } else {
                 logger.warn('Creating tables...')
-                this.createTables()
+                this.createTablesAndCreate()
                   .then(() => resolve())
               }
             })
         } else {
-          this.tablesExist()
-            .then( exist => {
-              if (exist) {
-                return Promise.resolve()
-              } else {
-                return this.createTables()
-              }
-            })
+          return this.checkTablesAndCreate()
             .then(() => resolve())
         }
       })
     })
   }
 
+  checkTablesAndCreate() {
+    return this.tablesExist()
+      .then(needsCreation => {
+        if (needsCreation.length === 0) {
+          return Promise.resolve()
+        } else {
+          logger.info(`Creating ${needsCreation.length} tables.`)
+          return this.createTables(needsCreation)
+        }
+      })
+  }
+
   tablesExist() {
     return dbAll(this.db, 'SELECT name FROM sqlite_master WHERE type = "table"')
       .then( results => {
         const tables = results.map( x => x.name )
-        return tables.indexOf('subdomain_queue') >= 0 &&
-          tables.indexOf('subdomain_zonefile_backups') >= 0 &&
-          tables.indexOf('transactions_tracked') >= 0
+        const toCreate = []
+        if (tables.indexOf('subdomain_queue') < 0) {
+          toCreate.push(CREATE_QUEUE)
+          toCreate.push(CREATE_QUEUE_INDEX)
+        }
+        if (tables.indexOf('subdomain_zonefile_backups') < 0) {
+          toCreate.push(CREATE_MYZONEFILE_BACKUPS)
+        }
+        if (tables.indexOf('transactions_tracked') < 0) {
+          toCreate.push(CREATE_TRANSACTIONS_TRACKED)
+        }
+        if (tables.indexOf('ip_info') < 0) {
+          toCreate.push(CREATE_IP_INFO)
+          toCreate.push(CREATE_IP_INFO_INDEX)
+        }
+
+        return toCreate
       })
   }
 
-  createTables() {
-    const toCreate = [CREATE_QUEUE, CREATE_QUEUE_INDEX, CREATE_MYZONEFILE_BACKUPS,
-                      CREATE_TRANSACTIONS_TRACKED]
+  createTables(toCreate:Array<string>) {
     let creationPromise = Promise.resolve()
     toCreate.forEach((createCmd) => {
       creationPromise = creationPromise.then(() => dbRun(this.db, createCmd))
@@ -127,6 +153,32 @@ export class RegistrarQueueDB {
     return Promise.all(subdomains.map(
       name => dbRun(this.db, cmd, [status, statusMore, name])))
       .then(() => statusMore)
+  }
+
+  logRequestorData(subdomainName: String, ownerAddress: String, ipAddress: String) {
+    const lookup = `SELECT queue_ix FROM subdomain_queue WHERE subdomainName = ?
+                    AND owner = ? AND sequenceNumber = 0`
+    const insert = 'INSERT INTO ip_info (ip_address, owner, queue_ix) VALUES (?, ?, ?)'
+    return dbAll(this.db, lookup, [subdomainName, ownerAddress])
+      .then((results) => {
+        if (results.length != 1) {
+          throw new Error('No queued entry found.')
+        }
+        const queueIndex = results[0].queue_ix
+        return dbRun(this.db, insert, [ipAddress, ownerAddress, queueIndex])
+      })
+  }
+
+  getOwnerAddressCount(ownerAddress: String) {
+    const lookup = 'SELECT * FROM ip_info WHERE owner = ?'
+    return dbAll(this.db, lookup, [ownerAddress])
+      .then((results) => results.length)
+  }
+
+  getIPAddressCount(ipAddress: String) {
+    const lookup = 'SELECT * FROM ip_info WHERE ip_address = ?'
+    return dbAll(this.db, lookup, [ipAddress])
+      .then((results) => results.length)
   }
 
   fetchQueue() {

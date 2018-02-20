@@ -1,4 +1,4 @@
-import { config as bskConfig } from 'blockstack'
+import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'blockstack'
 
 import logger from 'winston'
 
@@ -20,6 +20,12 @@ export function isSubdomainRegistered(fullyQualifiedAddress: String) {
 
 export function validlySignedUpdate() {
   throw new Error('Not implemented')
+}
+
+export function checkProofs(owner, zonefile) {
+  return resolveZoneFileToProfile(zonefile, owner)
+    .then((profile) => validateProofs(profile, owner))
+    .then((proofs) => proofs.filter(x => x.valid))
 }
 
 export function isRegistrationValid(

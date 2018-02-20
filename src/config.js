@@ -22,7 +22,9 @@ const configDevelopDefaults = {
   zonefileSize: 4096,
   development: false,
   port: 3000,
-  regtest: true
+  regtest: true,
+  ipLimit: 1,
+  proofsRequired: 0
 }
 
 const configDefaults = {
@@ -45,7 +47,9 @@ const configDefaults = {
   dbLocation: '/root/subdomain_registrar.db',
   adminPassword: 'NEEDS-A-PASSWORD',
   domainUri: 'https://registrar.whatever.com',
-  port: 3000
+  port: 3000,
+  ipLimit: 1,
+  proofsRequired: 0
 }
 
 
