@@ -1,0 +1,11 @@
+version: '3'
+services:
+  subdomain:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/root
+    ports:
+      - "3000:3000"
+    environment:
+      BSK_SUBDOMAIN_CONFIG: "/root/config.json"
