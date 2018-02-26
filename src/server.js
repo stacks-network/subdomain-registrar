@@ -55,6 +55,7 @@ export class SubdomainServer {
         if (authorization && authorization.startsWith('bearer ')) {
           const apiKey = authorization.slice('bearer '.length)
           if (this.apiKeys.includes(apiKey)) {
+            logger.info('Passed spam checks with API key')
             return Promise.resolve(false)
           }
         }
@@ -78,7 +79,7 @@ export class SubdomainServer {
             }
             return checkProofs(owner, zonefile)
               .then((proofsValid) => {
-                if (proofsValid.length >= this.proofsRequired) {
+                if (proofsValid.length < this.proofsRequired) {
                   return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`
                 }
                 return false

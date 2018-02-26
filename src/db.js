@@ -85,7 +85,7 @@ export class RegistrarQueueDB {
                 reject(`Failed to load database ${this.dbLocation}`)
               } else {
                 logger.warn('Creating tables...')
-                this.createTablesAndCreate()
+                this.checkTablesAndCreate()
                   .then(() => resolve())
               }
             })
