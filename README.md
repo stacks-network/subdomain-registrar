@@ -52,6 +52,21 @@ $ curl http://localhost:3000/status/spqr | jq .
 
 ```
 
+# Spam Counter Measures
+
+You can deploy many different spam protection schemes via a front-end service, however, this subdomain registrar
+also supports performing some spam protection on its own. You can configure IP limiting (i.e., limiting the number
+of names registered by a given IP) and social proof verification.
+
+Social proof verification performs the normal
+Blockstack JWT verification and social proof checks, provided by
+[blockstack.js](https://github.com/blockstack/blockstack.js).
+
+In order to support registration requests from "trusted sources", you can use the `apiKeys` configuration option
+to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
+skip the spam countermeasures.
+
+
 # Private Key Storage
 
 You can either store your private key hexes in your config.json, or pass them
