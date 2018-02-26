@@ -77,9 +77,9 @@ export class SubdomainServer {
               return previous
             }
             return checkProofs(owner, zonefile)
-              .then((proofsCount) => {
-                if (proofsCount >= this.proofsRequired) {
-                  return `Proofs are required: had ${proofsCount} valid, requires ${this.proofsRequired}`
+              .then((proofsValid) => {
+                if (proofsValid.length >= this.proofsRequired) {
+                  return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`
                 }
                 return false
               })
