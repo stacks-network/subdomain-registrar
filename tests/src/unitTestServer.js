@@ -11,7 +11,7 @@ const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(9)
+    t.plan(10)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -41,6 +41,7 @@ export function testSubdomainServer() {
                                   domainUri: 'http://myfreewebsite.com',
                                   ipLimit: 1,
                                   proofsRequired: 0,
+                                  apiKeys: ['abcdefghijk'],
                                   zonefileSize: 4096 })
     s.initializeServer()
       .then(
@@ -72,6 +73,10 @@ export function testSubdomainServer() {
           s.queueRegistration('car', testAddress2, 0, 'hello-world', 'foo')
           .then(() => t.ok(false, 'should not queue with a reused ip address'))
           .catch((err) => t.ok(err.message.startsWith('IP', 'should not queue with same IP address'))))
+      .then(
+        () =>
+          s.spamCheck('car', testAddress2, 'hello-world', 'foo', 'bearer abcdefghijk')
+          .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
       .then(
         () =>
           s.getSubdomainStatus('bar')

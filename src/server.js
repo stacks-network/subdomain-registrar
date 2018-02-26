@@ -9,7 +9,8 @@ export class SubdomainServer {
   constructor(config: {domainName: String, ownerKey: String,
                        paymentKey: String, dbLocation: String,
                        domainUri: String, zonefileSize: Number,
-                       ipLimit: Number, proofsRequired: Number}) {
+                       ipLimit: Number, proofsRequired: Number,
+                       apiKeys?: Array<String>}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -19,6 +20,7 @@ export class SubdomainServer {
                       priority: 10,
                       weight: 1 }
 
+    this.apiKeys = config.apiKeys ? config.apiKeys : []
     this.ipLimit = config.ipLimit
     this.proofsRequired = config.proofsRequired
     this.db = new RegistrarQueueDB(config.dbLocation)
@@ -29,7 +31,16 @@ export class SubdomainServer {
     return this.db.initialize()
   }
 
-  spamCheck(subdomainName, owner, zonefile, ipAddress) {
+  // returns a truth-y error message if request flags spam check
+  //  returns false if the request is not spam
+  spamCheck(subdomainName, owner, zonefile, ipAddress, authorization) {
+    // the logic here is a little convoluted, because I'm trying to short-circuit
+    //  the spam checks while also using Promises, which is a little tricky.
+    // the logic should encapsulate:
+    //
+    //  spam pass = (ownerAddressGood && (apiKeyGood || (ipAddressGood && socialProofsGood)))
+    //
+
     return this.db.getOwnerAddressCount(owner)
       .then((ownerCount) => {
         if (ownerCount >= 1) {
@@ -37,38 +48,51 @@ export class SubdomainServer {
         }
         return false
       })
-      .then((previous) => {
-        if (previous || this.ipLimit <= 0) {
-          return previous
+      .then((ownerCountCheck) => {
+        if (ownerCountCheck) {
+          return Promise.resolve(ownerCountCheck)
         }
-        return this.db.getIPAddressCount(ipAddress)
-          .then((ipCount) => {
-            if (ipCount >= this.ipLimit) {
-              return `IP address ${ipAddress} already registered ${ipCount} subdomains.`
-            }
-            return false
-          })
-      })
-      .then((previous) => {
-        if (previous || this.proofsRequired <= 0) {
-          return previous
+        if (authorization && authorization.startsWith('bearer ')) {
+          const apiKey = authorization.slice('bearer '.length)
+          if (this.apiKeys.includes(apiKey)) {
+            return Promise.resolve(false)
+          }
         }
-        return checkProofs(owner, zonefile)
-          .then((proofsCount) => {
-            if (proofsCount >= this.proofsRequired) {
-              return `Proofs are required: had ${proofsCount} valid, requires ${this.proofsRequired}`
+        let ipLimiterPromise
+        if (this.ipLimit <= 0) {
+          ipLimiterPromise = Promise.resolve(false)
+        } else {
+          ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
+            .then((ipCount) => {
+              if (ipCount >= this.ipLimit) {
+                return `IP address ${ipAddress} already registered ${ipCount} subdomains.`
+              }
+              return false
+            })
+        }
+
+        return ipLimiterPromise
+          .then((previous) => {
+            if (previous || this.proofsRequired <= 0) {
+              return previous
             }
-            return false
-          })
-          .catch((err) => {
-            logger.error(err)
-            return 'Proof validation failed'
+            return checkProofs(owner, zonefile)
+              .then((proofsCount) => {
+                if (proofsCount >= this.proofsRequired) {
+                  return `Proofs are required: had ${proofsCount} valid, requires ${this.proofsRequired}`
+                }
+                return false
+              })
+              .catch((err) => {
+                logger.error(err)
+                return 'Proof validation failed'
+              })
           })
       })
   }
 
   queueRegistration(subdomainName, owner, sequenceNumber, zonefile,
-                    ipAddress?: String = '') {
+                    ipAddress: ?string = '', authorization: ?string = '') {
     return this.isSubdomainInQueue(subdomainName)
       .then((inQueue) => {
         if (inQueue) {
@@ -86,7 +110,7 @@ export class SubdomainServer {
           throw new Error('Requested subdomain operation is invalid.')
         }
         return this.spamCheck(
-          subdomainName, owner, zonefile, ipAddress)
+          subdomainName, owner, zonefile, ipAddress, authorization)
       })
       .then((spamFailure) => {
         if (spamFailure) {

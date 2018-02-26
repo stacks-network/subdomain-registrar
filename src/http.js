@@ -35,12 +35,14 @@ export function makeHTTPServer(config) {
     // note: x-real-ip is *only* trust-worthy when running behind a
     //   proxy that the registrar controls!
     const ipAddress = req.headers['x-real-ip'] || req.connection.remoteAddress
+    const authorization = req.headers.authorization || ''
 
     server.queueRegistration(requestJSON.name,
                              requestJSON.owner_address,
                              0,
                              requestJSON.zonefile,
-                             ipAddress)
+                             ipAddress,
+                             authorization)
       .then(() => {
         res.writeHead(202, HEADERS)
         res.write(JSON.stringify(

@@ -24,6 +24,7 @@ const configDevelopDefaults = {
   port: 3000,
   regtest: true,
   ipLimit: 1,
+  apiKeys: [],
   proofsRequired: 0
 }
 
@@ -49,6 +50,7 @@ const configDefaults = {
   domainUri: 'https://registrar.whatever.com',
   port: 3000,
   ipLimit: 1,
+  apiKeys: [],
   proofsRequired: 0
 }
 
