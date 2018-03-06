@@ -60,7 +60,7 @@ export function unitTestOperations() {
 
     nock('https://blockchain.info')
       .persist()
-      .get(`/unspent?format=json&active=${testAddress}`)
+      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
       .reply(200, {unspent_outputs:
                    [ { value: 10000,
                        tx_output_n: 1,
@@ -108,12 +108,12 @@ export function unitTestOperations() {
 
     nock('https://blockchain.info')
       .persist()
-      .get('/latestblock')
+      .get('/latestblock?cors=true')
       .reply(200, { height: 300 })
 
     txs.forEach( x => nock('https://blockchain.info')
                  .persist()
-                 .get(`/rawtx/${x.txHash}`)
+                 .get(`/rawtx/${x.txHash}?cors=true`)
                  .reply(200, { block_height: x.blockheight }) )
 
     nock('https://core.blockstack.org')

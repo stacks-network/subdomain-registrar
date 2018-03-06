@@ -131,7 +131,7 @@ export function testSubdomainServer() {
 
     nock('https://blockchain.info')
       .persist()
-      .get(`/unspent?format=json&active=${testAddress}`)
+      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
       .reply(200, {unspent_outputs:
                    [ { value: 10000,
                        tx_output_n: 1,
@@ -232,7 +232,7 @@ export function testSubdomainServer() {
 
     nock('https://blockchain.info')
       .persist()
-      .get(`/unspent?format=json&active=${testAddress}`)
+      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
       .reply(200, {unspent_outputs:
                    [ { value: 10000,
                        tx_output_n: 1,

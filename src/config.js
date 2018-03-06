@@ -23,7 +23,7 @@ const configDevelopDefaults = {
   development: false,
   port: 3000,
   regtest: true,
-  ipLimit: 1,
+  ipLimit: 0,
   apiKeys: [],
   proofsRequired: 0
 }
