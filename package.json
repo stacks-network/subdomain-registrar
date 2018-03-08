@@ -4,7 +4,7 @@
   "description": "A subdomain registrar for Blockstack",
   "main": "lib/index.js",
   "dependencies": {
-    "blockstack": "^0.15.0",
+    "blockstack": "^0.16.0",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "node-fetch": "^2.0.0",
