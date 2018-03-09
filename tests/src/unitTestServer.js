@@ -104,6 +104,37 @@ export function testSubdomainServer() {
 
     })
 
+  test('apiKeyOnly', (t) => {
+    t.plan(2)
+    nock.cleanAll()
+
+    nock('https://core.blockstack.org')
+      .persist()
+      .get('/v1/names/bar.bar.id')
+      .reply(404, {})
+
+    let s = new SubdomainServer({ domainName: 'bar.id',
+                                  ownerKey: testSK,
+                                  paymentKey: testSK,
+                                  dbLocation: ':memory:',
+                                  domainUri: 'http://myfreewebsite.com',
+                                  ipLimit: 1,
+                                  proofsRequired: 0,
+                                  disableRegistrationsWithoutKey: true,
+                                  apiKeys: ['abcdefghijk'],
+                                  zonefileSize: 4096 })
+    s.initializeServer()
+      .then(
+        () =>
+          s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
+          .then(() => t.ok(false, 'should not queue bar.bar.id'))
+          .catch((err) => { console.log(err.stack)
+                            t.ok(true, 'should not be able to queue bar.bar.id') }))
+      .then(
+        () =>
+          s.spamCheck('bar', testAddress, 'hello-world', 'foo', 'bearer abcdefghijk')
+          .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
+    })
 
   test('submitBatch', (t) => {
     t.plan(7)

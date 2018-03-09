@@ -25,7 +25,8 @@ const configDevelopDefaults = {
   regtest: true,
   ipLimit: 0,
   apiKeys: [],
-  proofsRequired: 0
+  proofsRequired: 0,
+  disableRegistrationsWithoutKey: false
 }
 
 const configDefaults = {
@@ -51,7 +52,8 @@ const configDefaults = {
   port: 3000,
   ipLimit: 1,
   apiKeys: [],
-  proofsRequired: 0
+  proofsRequired: 0,
+  disableRegistrationsWithoutKey: false
 }
 
 

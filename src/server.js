@@ -10,6 +10,7 @@ export class SubdomainServer {
                        paymentKey: String, dbLocation: String,
                        domainUri: String, zonefileSize: Number,
                        ipLimit: Number, proofsRequired: Number,
+                       disableRegistrationsWithoutKey: boolean,
                        apiKeys?: Array<String>}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
@@ -19,7 +20,7 @@ export class SubdomainServer {
                       target: config.domainUri,
                       priority: 10,
                       weight: 1 }
-
+    this.disableRegistrationsWithoutKey = config.disableRegistrationsWithoutKey
     this.apiKeys = config.apiKeys ? config.apiKeys : []
     this.ipLimit = config.ipLimit
     this.proofsRequired = config.proofsRequired
@@ -58,6 +59,9 @@ export class SubdomainServer {
             logger.info('Passed spam checks with API key')
             return Promise.resolve(false)
           }
+        }
+        if (this.disableRegistrationsWithoutKey) {
+          return 'Registrations without API key are disabled'
         }
         let ipLimiterPromise
         if (this.ipLimit <= 0) {
