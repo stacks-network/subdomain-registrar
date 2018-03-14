@@ -1,14 +1,10 @@
 # Install
 
-This depends on a still-in-development version of `blockstack.js`, which is the trickiest
-part of setting up the service.
+To install from source:
 
 ```bash
-$ git clone https://github.com/blockstack/blockstack.js.git
-$ cd blockstack.js && git checkout feature/blockstack-operations
-$ npm i && npm run build && npm ln
-$ cd ../subdomain-registrar
-$ npm i && npm ln blockstack
+$ git clone https://github.com/blockstack/subdomain-registrar.git
+$ npm i
 ```
 
 
