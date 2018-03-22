@@ -2,6 +2,8 @@ import { transactions, config as bskConfig, safety, hexStringToECPair } from 'bl
 import { makeZoneFile } from 'zone-file'
 import logger from 'winston'
 import fetch from 'node-fetch'
+import { crypto } from 'bitcoinjs-lib'
+import RIPEMD160 from 'ripemd160'
 
 export type SubdomainOp = {
   owner: String,
@@ -128,6 +130,11 @@ Promise<Array<{txHash: String, status: Boolean}>> {
           })
       ))
     )
+}
+
+export function hash160(input: Buffer) {
+  const sha256 = crypto.sha256(input)
+  return (new RIPEMD160()).update(sha256).digest()
 }
 
 // this is a hack -- this is a stand-in while we roll out support for

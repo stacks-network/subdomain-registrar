@@ -17,7 +17,7 @@ export function testSubdomainServer() {
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/foo.bar.id')
-      .reply(200, {})
+      .reply(200, { status: 'registered_subdomain'})
 
     nock('https://core.blockstack.org')
       .persist()
@@ -81,7 +81,7 @@ export function testSubdomainServer() {
         () =>
           s.getSubdomainStatus('bar')
           .then((x) =>
-                t.ok(x.status.startsWith('Subdomain is queued for update', 'bar.bar.id should be queued'))))
+                t.ok(x.status.startsWith('Subdomain is queued for update'), 'bar.bar.id should be queued')))
       .then(
         () =>
           s.updateQueueStatus(['bar'], 'txhash'))
@@ -207,7 +207,7 @@ export function testSubdomainServer() {
         nock('https://core.blockstack.org')
           .get('/v1/names/foo.bar.id')
           .times(1)
-          .reply(200, {})
+          .reply(200, { status: 'registered_subdomain'})
       })
       .then(() => s.lock.writeLock((release) => {
         s.submitBatch()

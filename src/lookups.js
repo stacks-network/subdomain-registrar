@@ -5,7 +5,7 @@ import logger from 'winston'
 export function isSubdomainRegistered(fullyQualifiedAddress: String) {
   return new Promise((resolve, reject) => {
     bskConfig.network.getNameInfo(fullyQualifiedAddress)
-      .then(() => resolve(true))
+      .then(nameInfo => resolve(nameInfo.status === 'registered_subdomain'))
       .catch((err) => {
         if (err.message === 'Name not found') {
           resolve(false)
