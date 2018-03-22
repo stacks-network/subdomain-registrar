@@ -11,7 +11,7 @@ const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(10)
+    t.plan(14)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -101,8 +101,21 @@ export function testSubdomainServer() {
           s.getSubdomainStatus('tar')
           .then((x) =>
                 t.ok(x.status.startsWith('Subdomain not registered', 'tar.bar.id should not be queued'))))
-
-    })
+      .then(
+        () =>
+          s.getSubdomainInfo('bar.bar.id')
+          .then(resp =>
+                {
+                  t.equal(resp.message.status, 'submitted_subdomain')
+                  t.equal(resp.message.address, testAddress)
+                  t.equal(resp.message.last_txid, 'txhash')
+                }))
+      .then(
+        () =>
+          s.getSubdomainInfo('tar.bar.id')
+          .then(resp => t.equal(resp.statusCode, 404)))
+      .catch( (err) => { console.log(err.stack) } )
+  })
 
   test('apiKeyOnly', (t) => {
     t.plan(2)
