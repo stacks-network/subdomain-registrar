@@ -190,7 +190,7 @@ export class RegistrarQueueDB {
   }
 
   getStatusRecord(subdomainName) {
-    const lookup = 'SELECT status, status_more FROM subdomain_queue' +
+    const lookup = 'SELECT status, status_more, owner, zonefile FROM subdomain_queue' +
           ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
     return dbAll(this.db, lookup, [subdomainName])
   }

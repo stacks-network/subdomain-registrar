@@ -127,6 +127,21 @@ export function makeHTTPServer(config) {
       })
   })
 
+  app.get('/v1/names/:fullyQualified', (req, res) => {
+    server.getSubdomainInfo(req.params.fullyQualified)
+      .catch(error => {
+        logger.error(error)
+        return { message: { error: 'Error processing request' },
+                 statusCode: 400 }
+      })
+      .then(infoResponse => {
+        res.writeHead(infoResponse.statusCode, HEADERS)
+        res.write(JSON.stringify(
+          infoResponse.message))
+        res.end()
+      })
+  })
+
   const zonefileDelay = Math.min(2147483647,
                                  Math.floor(60000 * config.checkTransactionPeriod))
   const batchDelay = Math.min(2147483647,

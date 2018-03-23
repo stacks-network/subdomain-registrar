@@ -13,7 +13,7 @@ export function unitTestLookups() {
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .reply(200, {})
+      .reply(200, { status: 'registered_subdomain'})
 
     isSubdomainRegistered('foo.bar.id')
       .then(x => t.ok(x))
@@ -66,7 +66,7 @@ export function unitTestLookups() {
     nock.cleanAll()
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .reply(200, {})
+      .reply(200, { status: 'registered_subdomain'})
 
     nock('https://core.blockstack.org')
       .get('/v1/names/bar.bar.id')

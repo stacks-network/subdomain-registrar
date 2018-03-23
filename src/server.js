@@ -1,6 +1,6 @@
 import logger from 'winston'
 
-import { makeUpdateZonefile, submitUpdate, checkTransactions } from './operations'
+import { makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
 import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './lookups'
 import ReadWriteLock from 'rwlock'
 import { RegistrarQueueDB } from './db'
@@ -276,6 +276,44 @@ export class SubdomainServer {
            }
          })
     })
+  }
+
+  getSubdomainInfo(fullyQualifiedName: string) {
+    if (!fullyQualifiedName.endsWith(`.${this.domainName}`)) {
+      return Promise.resolve({
+        message: { error: 'Wrong domain' },
+        statusCode: 400 })
+    }
+    const namePieces = fullyQualifiedName.split('.')
+    if (namePieces.length !== 3) {
+      return Promise.resolve({
+        message: { error: 'Bad name' },
+        statusCode: 400 })
+    }
+    const subdomainName = namePieces[0]
+    return this.db.getStatusRecord(subdomainName)
+      .then((rows) => {
+        if (rows.length > 0) {
+          const statusRecord = rows[0]
+          const nameRecord = { blockchain: 'bitcoin' }
+          if (statusRecord.status === 'received') {
+            nameRecord.status = 'pending_subdomain'
+            nameRecord.last_txid = '' // eslint-disable-line camelcase
+          } else if (statusRecord.status === 'submitted') {
+            nameRecord.status = 'submitted_subdomain'
+            nameRecord.last_txid = statusRecord.status_more // eslint-disable-line camelcase
+          }
+          nameRecord.zonefile = statusRecord.zonefile
+          nameRecord.address = statusRecord.owner
+          nameRecord.zonefile_hash = hash160( // eslint-disable-line camelcase
+            Buffer.from(nameRecord.zonefile)).toString('hex')
+          return { message: nameRecord,
+                   statusCode: 200 }
+        } else {
+          return { message: { error: 'No such subdomain' },
+                   statusCode: 404 }
+        }
+      })
   }
 
   checkZonefiles() {
