@@ -80,6 +80,20 @@ bsk.hexStringToECPair('9bffeccf649d21814ce6a605ad5cb1bdf1ac9ee44c53ef08a292af828
 
 In most cases, you want to use the compressed key.
 
+### Configuring Instantaneous Resolution
+
+Per the design outlined [here](https://github.com/blockstack/blockstack-core/issues/750), the subdomain
+registrar can be configured so that blockstack indexer nodes will respond with HTTP 301 status codes
+for missing subdomains. The 301 redirect will send the name lookup request to a URI designated by
+the _domain_ name. In a standard setup, this would allow nearly _instantaneous_ resolution of subdomain
+names. (*Note:* these names will not have been committed to the blockchain yet, and therefore the response
+from the designated endpoint _do not_ have the same security properties as committed names).
+
+To support this, the subdomain registrar is capable of responding to `/v1/names/foo.bar.id` style requests,
+and can be configured to set the `_resolver` URI entry in each zonefile that it publishes. To enable this
+behavior, set the `resolverUri` setting in your `config.json` file to a public-facing URL for your registrar.
+We recommend placing this GET `/v1/names/` endpoint behind a caching layer of some kind.
+
 # Sample Curl Scripts
 
 
