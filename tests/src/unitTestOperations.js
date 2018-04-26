@@ -134,8 +134,8 @@ export function unitTestOperations() {
   test('makeUpdateZonefile', (t) => {
     t.plan(5)
 
-    let uriEntry = {name: 'bar.id', target: 'bar.com',
-                    priority: 1, weight: 10}
+    let uriEntry = [{name: 'bar.id', target: 'bar.com',
+                     priority: 1, weight: 10}]
     let maxZonefileBytes = 1000
 
     let subdomainName = 'foo'

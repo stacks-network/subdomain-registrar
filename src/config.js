@@ -19,7 +19,7 @@ const configDevelopDefaults = {
   dbLocation: '/tmp/subdomain_registrar.db',
   adminPassword: 'tester129',
   domainUri: 'file:///tmp/whatever',
-  resolverUri: 'https://registrar.location.com',
+  resolverUri: false,
   zonefileSize: 4096,
   development: false,
   port: 3000,
