@@ -1,3 +1,4 @@
+/* @flow */
 import logger from 'winston'
 
 import { makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
@@ -6,20 +7,42 @@ import ReadWriteLock from 'rwlock'
 import { RegistrarQueueDB } from './db'
 
 export class SubdomainServer {
-  constructor(config: {domainName: String, ownerKey: String,
-                       paymentKey: String, dbLocation: String,
-                       domainUri: String, zonefileSize: Number,
-                       ipLimit: Number, proofsRequired: Number,
+  domainName: string
+  ownerKey: string
+  paymentKey: string
+  zonefileSize: number
+  uriEntries: Array<{ name: string, target: string, priority: number, weight: number}>
+  disableRegistrationsWithoutKey: boolean
+  apiKeys: Array<string>
+  ipLimit: number
+  proofsRequired: number
+  db: RegistrarQueueDB
+  lock: ReadWriteLock
+
+  constructor(config: {domainName: string, ownerKey: string,
+                       paymentKey: string, dbLocation: string,
+                       domainUri?: ?string, resolverUri: ?string,
+                       zonefileSize: number,
+                       ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
-                       apiKeys?: Array<String>}) {
+                       apiKeys?: Array<string>}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
     this.zonefileSize = config.zonefileSize
-    this.uriEntry = { name: '_http._tcp',
-                      target: config.domainUri,
-                      priority: 10,
-                      weight: 1 }
+    this.uriEntries = []
+    if (config.domainUri) {
+      this.uriEntries.push({ name: '_http._tcp',
+                             target: config.domainUri,
+                             priority: 10,
+                             weight: 1 })
+    }
+    if (config.resolverUri) {
+      this.uriEntries.push({ name: '_resolver',
+                             target: config.resolverUri,
+                             priority: 10,
+                             weight: 1 })
+    }
     this.disableRegistrationsWithoutKey = config.disableRegistrationsWithoutKey
     this.apiKeys = config.apiKeys ? config.apiKeys : []
     this.ipLimit = config.ipLimit
@@ -34,7 +57,8 @@ export class SubdomainServer {
 
   // returns a truth-y error message if request flags spam check
   //  returns false if the request is not spam
-  spamCheck(subdomainName, owner, zonefile, ipAddress, authorization) {
+  spamCheck(subdomainName: string, owner: string, zonefile: string,
+            ipAddress: ?string, authorization: ?string) {
     // the logic here is a little convoluted, because I'm trying to short-circuit
     //  the spam checks while also using Promises, which is a little tricky.
     // the logic should encapsulate:
@@ -67,13 +91,17 @@ export class SubdomainServer {
         if (this.ipLimit <= 0) {
           ipLimiterPromise = Promise.resolve(false)
         } else {
-          ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
-            .then((ipCount) => {
-              if (ipCount >= this.ipLimit) {
-                return `IP address ${ipAddress} already registered ${ipCount} subdomains.`
-              }
-              return false
-            })
+          if (!ipAddress) {
+            return 'IP limiting in effect, and no IP address detected for request.'
+          } else {
+            ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
+              .then((ipCount) => {
+                if (ipCount >= this.ipLimit) {
+                  return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
+                }
+                return false
+              })
+          }
         }
 
         return ipLimiterPromise
@@ -96,7 +124,8 @@ export class SubdomainServer {
       })
   }
 
-  queueRegistration(subdomainName, owner, sequenceNumber, zonefile,
+  queueRegistration(subdomainName: string, owner: string,
+                    sequenceNumber: number, zonefile: string,
                     ipAddress: ?string = '', authorization: ?string = '') {
     return this.isSubdomainInQueue(subdomainName)
       .then((inQueue) => {
@@ -129,7 +158,7 @@ export class SubdomainServer {
             logger.debug('Obtained lock to register.')
             this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
               .then(() => {
-                logger.info(`Logging requestor info (ip= ${ipAddress} owner=${owner}`)
+                logger.info(`Logging requestor info (ip= ${JSON.stringify(ipAddress)} owner=${owner}`)
                 return this.db.logRequestorData(subdomainName, owner, ipAddress)
               })
               .catch((err) => {
@@ -153,8 +182,8 @@ export class SubdomainServer {
       })
   }
 
-  getSubdomainStatus(subdomainName: String):
-  Promise<{status: String, statusCode?: Number}> {
+  getSubdomainStatus(subdomainName: string):
+  Promise<{status: string, statusCode?: Number}> {
     return isSubdomainRegistered(`${subdomainName}.${this.domainName}`)
       .then((isRegistered) => {
         if (isRegistered) {
@@ -183,24 +212,24 @@ export class SubdomainServer {
       })
   }
 
-  isSubdomainInQueue(subdomainName: String) {
+  isSubdomainInQueue(subdomainName: string) {
     return this.getSubdomainStatus(subdomainName)
       .then(status => (status.statusCode !== 404))
   }
 
-  backupZonefile(zonefile: String) {
+  backupZonefile(zonefile: string) {
     return this.db.backupZonefile(zonefile)
   }
 
-  addTransactionToTrack(txHash: String, zonefile: String) {
+  addTransactionToTrack(txHash: string, zonefile: string) {
     return this.db.trackTransaction(txHash, zonefile)
   }
 
-  updateQueueStatus(namesSubmitted: Array<String>, txHash: String) {
+  updateQueueStatus(namesSubmitted: Array<string>, txHash: string) {
     return this.db.updateStatusFor(namesSubmitted, 'submitted', txHash)
   }
 
-  markTransactionsComplete(entries: Array<{txHash: String}>) {
+  markTransactionsComplete(entries: Array<{txHash: string}>) {
     if (entries.length > 0) {
       logger.info(`${entries.length} transactions newly finished.`)
     } else {
@@ -215,7 +244,7 @@ export class SubdomainServer {
     return this.db.fetchQueue()
   }
 
-  submitBatch() : Promise<String> {
+  submitBatch() : Promise<string> {
     return new Promise((resolve, reject) => {
       this.lock.writeLock((release) => {
         logger.debug('Obtained lock, fetching queue.')
@@ -241,11 +270,11 @@ export class SubdomainServer {
               return null
             }
             logger.info(`${queue.length} items in the queue.`)
-            const update = makeUpdateZonefile(this.domainName, this.uriEntry,
+            const update = makeUpdateZonefile(this.domainName, this.uriEntries,
                                               queue, this.zonefileSize)
             const zonefile = update.zonefile
             const updatedFromQueue = update.submitted
-            logger.info(`[${updatedFromQueue}] will be in this batch.`)
+            logger.info(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
             return this.backupZonefile(zonefile)
               .then(() => submitUpdate(this.domainName, zonefile,
                                        this.ownerKey, this.paymentKey))
@@ -295,7 +324,12 @@ export class SubdomainServer {
       .then((rows) => {
         if (rows.length > 0) {
           const statusRecord = rows[0]
-          const nameRecord = { blockchain: 'bitcoin' }
+          const nameRecord = { blockchain: 'bitcoin',
+                               status: 'unknown',
+                               last_txid: '', // eslint-disable-line camelcase
+                               zonefile: statusRecord.zonefile,
+                               address: statusRecord.owner,
+                               zonefile_hash: '' } // eslint-disable-line camelcase
           if (statusRecord.status === 'received') {
             nameRecord.status = 'pending_subdomain'
             nameRecord.last_txid = '' // eslint-disable-line camelcase
@@ -303,8 +337,6 @@ export class SubdomainServer {
             nameRecord.status = 'submitted_subdomain'
             nameRecord.last_txid = statusRecord.status_more // eslint-disable-line camelcase
           }
-          nameRecord.zonefile = statusRecord.zonefile
-          nameRecord.address = statusRecord.owner
           nameRecord.zonefile_hash = hash160( // eslint-disable-line camelcase
             Buffer.from(nameRecord.zonefile)).toString('hex')
           return { message: nameRecord,

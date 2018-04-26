@@ -1,3 +1,5 @@
+/* @flow */
+
 import { transactions, config as bskConfig, safety, hexStringToECPair } from 'blockstack'
 import { makeZoneFile } from 'zone-file'
 import logger from 'winston'
@@ -6,17 +8,16 @@ import { crypto } from 'bitcoinjs-lib'
 import RIPEMD160 from 'ripemd160'
 
 export type SubdomainOp = {
-  owner: String,
+  owner: string,
   sequenceNumber: number,
-  zonefilePartsLength: number,
-  zonefileParts: Array<String>,
-  subdomainName: String,
-  signature?: String
+  zonefile: string,
+  subdomainName: string,
+  signature?: string
 }
 
 const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
 
-export function destructZonefile(zonefile: String) {
+export function destructZonefile(zonefile: string) {
   const encodedZonefile = Buffer.from(zonefile)
         .toString('base64')
   // we pack into 250 byte strings -- the entry "zf99=" eliminates 5 useful bytes,
@@ -50,14 +51,14 @@ export function subdomainOpToZFPieces(operation: SubdomainOp) {
 }
 
 export function makeUpdateZonefile(
-  domainName: String,
-  uriEntry: {name: String, target: String, priority: Number, weight: Number},
+  domainName: string,
+  uriEntries: Array<{name: string, target: string, priority: number, weight: number}>,
   updates: Array<SubdomainOp>,
   maxZonefileBytes: number) {
   const subdomainRecs = []
   const zonefileObject = { $origin: domainName,
                            $ttl: 3600,
-                           uri: [uriEntry],
+                           uri: uriEntries,
                            txt: subdomainRecs }
   const submitted = []
 
@@ -83,10 +84,10 @@ export function makeUpdateZonefile(
 }
 
 export function submitUpdate(
-  domainName: String,
-  zonefile: String,
-  ownerKey: String,
-  paymentKey: String) {
+  domainName: string,
+  zonefile: string,
+  ownerKey: string,
+  paymentKey: string) {
   const ownerAddress = hexStringToECPair(ownerKey).getAddress()
   return safety.ownsName(domainName, ownerAddress)
     .then((ownsName) => {
@@ -98,8 +99,8 @@ export function submitUpdate(
     .then(txHex => bskConfig.network.broadcastTransaction(txHex))
 }
 
-export function checkTransactions(txs: Array<{txHash: String, zonefile: String}>):
-Promise<Array<{txHash: String, status: Boolean}>> {
+export function checkTransactions(txs: Array<{txHash: string, zonefile: string}>):
+Promise<Array<{txHash: string, status: boolean}>> {
   return bskConfig.network.getBlockHeight()
     .then(
       blockHeight => Promise.all(txs.map(
