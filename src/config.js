@@ -19,7 +19,7 @@ const configDevelopDefaults = {
   dbLocation: '/tmp/subdomain_registrar.db',
   adminPassword: 'tester129',
   domainUri: 'file:///tmp/whatever',
-  zonefileSize: 4096,
+  zonefileSize: 40960,
   development: false,
   port: 3000,
   regtest: true,
@@ -45,7 +45,7 @@ const configDefaults = {
   batchDelayPeriod: 15,
   // check if zonefiles can be broadcasted every 5 minutes
   checkTransactionPeriod: 5,
-  zonefileSize: 4096,
+  zonefileSize: 40960,
   dbLocation: '/root/subdomain_registrar.db',
   adminPassword: 'NEEDS-A-PASSWORD',
   domainUri: 'https://registrar.whatever.com',
