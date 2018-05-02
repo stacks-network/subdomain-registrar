@@ -29,8 +29,8 @@
     "tape-istanbul": "^1.2.0"
   },
   "bin": {
-    "blockstack-subdomain-registrar": "lib/index.js"
-   },
+    "blockstack-subdomain-registrar": "./lib/index.js"
+  },
   "scripts": {
     "start": "npm run build && node lib/index.js",
     "build": "babel src -d lib",
