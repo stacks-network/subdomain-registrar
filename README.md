@@ -9,10 +9,18 @@ $ npm i
 
 # Starting up the registrar
 
-You can specify your config file via the `BSK_SUBDOMAIN_CONFIG` environment parameter. 
+You can run the registrar in place from its source directory, and you can specify your config file via the `BSK_SUBDOMAIN_CONFIG` environment parameter. 
 
 ```bash
 BSK_SUBDOMAIN_CONFIG=/home/aaron/devel/subdomain-registrar/my-local-config.js npm run start
+```
+
+You can also install the subdomain registrar globally.  It should install as the program `blockstack-subdomain-registrar`.
+
+```bash
+$ sudo npm i -g   # or, "sudo npm link"
+$ which blockstack-subdomain-registrar
+/usr/bin/blockstack-subdomain-registrar
 ```
 
 # Basic Operation
