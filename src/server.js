@@ -342,7 +342,7 @@ export class SubdomainServer {
           return { message: nameRecord,
                    statusCode: 200 }
         } else {
-          return { message: { error: 'No such subdomain' },
+          return { message: { status: 'available' },
                    statusCode: 404 }
         }
       })
