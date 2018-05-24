@@ -35,6 +35,10 @@ For example, if I want to register names like `alice.people.id` or `bob.people.i
 2. Set the `BSK_SUBDOMAIN_OWNER_KEY` to the private key hex string which owns `people.id` (this is a 64-character hex-string with `01` appended if the address is compressed, which is usually the case)
 3. Set the domain name property in the `config.json` to `people.id`
 
+#### The domainUri
+
+The configuration `domainUri` controls the URI entry in the domain name's zonefile (e.g., `people.id`). This is used by other parts of the blockstack ecosystem to do things like lookup the profile associated with the name (i.e., `lookupProfile()` in `blockstack.js`). If you want your *domain* name to have a profile, you should set this URI entry to the location of the `profile.json` file (see `blockstack.js` for documentation on that file). Setting the domainUri is not necessary for the correct operation of the subdomain registrar.
+
 ### Funding a wallet
 
 Each batch of registrations is an _update_ transaction -- the Bitcoin transaction fee for this must be paid by the registrar. This requires a payment-address. You must:
