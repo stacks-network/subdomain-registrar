@@ -17,7 +17,8 @@ export function makeHTTPServer(config) {
   app.get('/index', (req, res) => {
     res.writeHead(200, HEADERS)
     res.write(JSON.stringify(
-      { status: true }))
+      { status: true,
+        domainName: config.domainName }))
     res.end()
   })
 
