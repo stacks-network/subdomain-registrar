@@ -15,5 +15,6 @@
       "stringify": true,
       "colorize": true,
       "json": false
-  }
+  },
+  "nameMinLength": 8
 }
