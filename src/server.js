@@ -15,6 +15,7 @@ export class SubdomainServer {
   disableRegistrationsWithoutKey: boolean
   apiKeys: Array<string>
   ipLimit: number
+  nameMinLength: number
   proofsRequired: number
   db: RegistrarQueueDB
   lock: ReadWriteLock
@@ -25,7 +26,8 @@ export class SubdomainServer {
                        zonefileSize: number,
                        ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
-                       apiKeys?: Array<string>}) {
+                       apiKeys?: Array<string>,
+                       nameMinLength: number}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -46,6 +48,7 @@ export class SubdomainServer {
     this.disableRegistrationsWithoutKey = config.disableRegistrationsWithoutKey
     this.apiKeys = config.apiKeys ? config.apiKeys : []
     this.ipLimit = config.ipLimit
+    this.nameMinLength = config.nameMinLength
     this.proofsRequired = config.proofsRequired
     this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new ReadWriteLock()
@@ -53,6 +56,14 @@ export class SubdomainServer {
 
   initializeServer() {
     return this.db.initialize()
+  }
+
+  minLengthCheck(subdomainName: string) {
+    if(subdomainName.length < this.nameMinLength) {
+      return Promise.resolve(false)
+    } else {
+      return Promise.resolve(true)
+    }
   }
 
   // returns a truth-y error message if request flags spam check
@@ -134,7 +145,14 @@ export class SubdomainServer {
                            ' is already in queue for this name.')
           throw new Error('Subdomain operation already queued for this name.')
         }
-        return isRegistrationValid(
+        return this.minLengthCheck(subdomainName)
+        .then((valid) => {
+          if(!valid) {
+            logger.warn(`Discarding operation for ${subdomainName}` +
+                             ` because subdomain shorter than ${this.nameMinLength} characters.`)
+            throw new Error(`Username must be ${this.nameMinLength} characters or longer.`)
+          }
+          return isRegistrationValid(
           subdomainName, this.domainName, owner, sequenceNumber, zonefile)
       })
       .then((valid) => {
@@ -180,6 +198,7 @@ export class SubdomainServer {
           })
         })
       })
+    })
   }
 
   getSubdomainStatus(subdomainName: string):
