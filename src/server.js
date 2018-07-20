@@ -125,7 +125,7 @@ export class SubdomainServer {
             } else {
               logger.warn(`Discarding operation for ${subdomainName}` +
                           ` because subdomain shorter than ${this.nameMinLength} characters.`)
-              return `Username must be ${this.nameMinLength} characters or longer.`
+              return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
             }
           })
           .then((previous) => {

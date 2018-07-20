@@ -25,7 +25,7 @@ export function makeHTTPServer(config) {
   app.post('/register', (req, res) => {
     const requestJSON = req.body
     if (!requestJSON) {
-      res.writeHead(409, HEADERS)
+      res.writeHead(400, HEADERS)
       res.write(JSON.stringify(
         { status: false,
           message: 'Failed to parse your registration request: expected JSON' }))
@@ -55,10 +55,14 @@ export function makeHTTPServer(config) {
       .catch((err) => {
         logger.error(err)
         let message = 'Failed to validate your registration request.'
+        let code = 409
         if (err.message.startsWith('Proof')) {
           message = err.message
         }
-        res.writeHead(409, HEADERS)
+        if (err.message.startsWith('NameLength:')) {
+          code = 400
+        }
+        res.writeHead(code, HEADERS)
         res.write(JSON.stringify(
           { status: false,
             message }))
