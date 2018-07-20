@@ -58,11 +58,11 @@ export class SubdomainServer {
     return this.db.initialize()
   }
 
-  minLengthCheck(subdomainName: string) {
-    if(subdomainName.length < this.nameMinLength) {
-      return Promise.resolve(false)
+  isValidLength(subdomainName: string) {
+    if (!this.nameMinLength) {
+      return true
     } else {
-      return Promise.resolve(true)
+      return subdomainName.length >= this.nameMinLength
     }
   }
 
@@ -117,6 +117,18 @@ export class SubdomainServer {
 
         return ipLimiterPromise
           .then((previous) => {
+            if (previous) {
+              return previous
+            }
+            if (this.isValidLength(subdomainName)) {
+              return false
+            } else {
+              logger.warn(`Discarding operation for ${subdomainName}` +
+                          ` because subdomain shorter than ${this.nameMinLength} characters.`)
+              return `Username must be ${this.nameMinLength} characters or longer.`
+            }
+          })
+          .then((previous) => {
             if (previous || this.proofsRequired <= 0) {
               return previous
             }
@@ -145,14 +157,7 @@ export class SubdomainServer {
                            ' is already in queue for this name.')
           throw new Error('Subdomain operation already queued for this name.')
         }
-        return this.minLengthCheck(subdomainName)
-        .then((valid) => {
-          if(!valid) {
-            logger.warn(`Discarding operation for ${subdomainName}` +
-                             ` because subdomain shorter than ${this.nameMinLength} characters.`)
-            throw new Error(`Username must be ${this.nameMinLength} characters or longer.`)
-          }
-          return isRegistrationValid(
+        return isRegistrationValid(
           subdomainName, this.domainName, owner, sequenceNumber, zonefile)
       })
       .then((valid) => {
@@ -198,7 +203,6 @@ export class SubdomainServer {
           })
         })
       })
-    })
   }
 
   getSubdomainStatus(subdomainName: string):
