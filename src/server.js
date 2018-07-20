@@ -15,6 +15,7 @@ export class SubdomainServer {
   disableRegistrationsWithoutKey: boolean
   apiKeys: Array<string>
   ipLimit: number
+  nameMinLength: number
   proofsRequired: number
   db: RegistrarQueueDB
   lock: ReadWriteLock
@@ -25,7 +26,8 @@ export class SubdomainServer {
                        zonefileSize: number,
                        ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
-                       apiKeys?: Array<string>}) {
+                       apiKeys?: Array<string>,
+                       nameMinLength: number}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -46,6 +48,7 @@ export class SubdomainServer {
     this.disableRegistrationsWithoutKey = config.disableRegistrationsWithoutKey
     this.apiKeys = config.apiKeys ? config.apiKeys : []
     this.ipLimit = config.ipLimit
+    this.nameMinLength = config.nameMinLength
     this.proofsRequired = config.proofsRequired
     this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new ReadWriteLock()
@@ -53,6 +56,14 @@ export class SubdomainServer {
 
   initializeServer() {
     return this.db.initialize()
+  }
+
+  isValidLength(subdomainName: string) {
+    if (!this.nameMinLength) {
+      return true
+    } else {
+      return subdomainName.length >= this.nameMinLength
+    }
   }
 
   // returns a truth-y error message if request flags spam check
@@ -105,6 +116,18 @@ export class SubdomainServer {
         }
 
         return ipLimiterPromise
+          .then((previous) => {
+            if (previous) {
+              return previous
+            }
+            if (this.isValidLength(subdomainName)) {
+              return false
+            } else {
+              logger.warn(`Discarding operation for ${subdomainName}` +
+                          ` because subdomain shorter than ${this.nameMinLength} characters.`)
+              return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
+            }
+          })
           .then((previous) => {
             if (previous || this.proofsRequired <= 0) {
               return previous

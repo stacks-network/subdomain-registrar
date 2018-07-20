@@ -55,7 +55,8 @@ const configDefaults = {
   ipLimit: 1,
   apiKeys: [],
   proofsRequired: 0,
-  disableRegistrationsWithoutKey: false
+  disableRegistrationsWithoutKey: false,
+  nameMinLength: 1
 }
 
 

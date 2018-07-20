@@ -11,7 +11,7 @@ const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(14)
+    t.plan(15)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -22,6 +22,11 @@ export function testSubdomainServer() {
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/bar.bar.id')
+      .reply(404, {})
+
+    nock('https://core.blockstack.org')
+      .persist()
+      .get('/v1/names/ba.bar.id')
       .reply(404, {})
 
     nock('https://core.blockstack.org')
@@ -42,7 +47,8 @@ export function testSubdomainServer() {
                                   ipLimit: 1,
                                   proofsRequired: 0,
                                   apiKeys: ['abcdefghijk'],
-                                  zonefileSize: 4096 })
+                                  zonefileSize: 4096,
+                                  nameMinLength: 3})
     s.initializeServer()
       .then(
         () =>
@@ -63,6 +69,12 @@ export function testSubdomainServer() {
           .then(() => t.ok(true, 'should queue bar.bar.id'))
           .catch((err) => { console.log(err.stack)
                             t.ok(false, 'should be able to queue bar.bar.id') }))
+      .then(
+        () =>
+          s.queueRegistration('ba', testAddress2, 0, 'hello-world', 'foo')
+          .then(() => t.ok(false, 'should not queue ba.bar.id because ba is too short'))
+          .catch((err) => { console.log(err.stack)
+                            t.ok(true, 'should not be able to queue ba.bar.id') }))
       .then(
         () =>
           s.queueRegistration('car', testAddress, 0, 'hello-world', 'foo')
