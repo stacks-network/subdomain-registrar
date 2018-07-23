@@ -11,7 +11,7 @@ const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(15)
+    t.plan(16)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -126,6 +126,10 @@ export function testSubdomainServer() {
         () =>
           s.getSubdomainInfo('tar.bar.id')
           .then(resp => t.equal(resp.statusCode, 404)))
+      .then(
+        () =>
+          s.getSubdomainInfo('ba.bar.id')
+          .then(resp => t.equal(resp.statusCode, 400)))
       .catch( (err) => { console.log(err.stack) } )
   })
 
