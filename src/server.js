@@ -364,6 +364,9 @@ export class SubdomainServer {
             Buffer.from(nameRecord.zonefile)).toString('hex')
           return { message: nameRecord,
                    statusCode: 200 }
+        } else if (!this.isValidLength(subdomainName)) {
+          return { message: { status: 'invalid_name' },
+                   statusCode: 400 }
         } else {
           return { message: { status: 'available' },
                    statusCode: 404 }
