@@ -132,9 +132,10 @@ export function testSubdomainServer() {
           s.getSubdomainInfo('ba.bar.id')
           .then(resp => t.equal(resp.statusCode, 400)))
       .then(
-        () => 
+        () =>
           s.listSubdomainRecords(0)
-          .then(listing => {
+          .then(response => {
+            const listing = response.message
             t.equal(listing.length, 1, 'Should list 1 subdomain')
             t.equal(listing[0].name, 'bar.bar.id', 'Should have bar in listing')
             t.equal(listing[0].address, testAddress, 'Should have bar owned by the right addr')
