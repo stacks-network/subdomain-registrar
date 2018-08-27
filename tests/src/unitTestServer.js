@@ -12,7 +12,7 @@ const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6d
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(22)
+    t.plan(24)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -133,7 +133,8 @@ export function testSubdomainServer() {
           .then(resp => t.equal(resp.statusCode, 400)))
       .then(
         () => 
-          s.listSubdomainRecords(0)
+          s.listSubdomainRecords(parseInt(new Date().getTime()/1000))
+          .then(listing => listing.message)
           .then(listing => {
             t.equal(listing.length, 1, 'Should list 1 subdomain')
             t.equal(listing[0].name, 'bar.bar.id', 'Should have bar in listing')
@@ -141,7 +142,14 @@ export function testSubdomainServer() {
             t.equal(listing[0].sequence, 0, 'should have 0 sequence number')
             t.equal(listing[0].zonefile, 'hello-world', 'should have correct zonefile')
             t.equal(listing[0].status, 'submitted', 'should have correct status')
+            t.ok(listing[0].receivedTimestamp > new Date().getTime()/1000 - 10, 'listing is recent')
           }))
+      .then(
+        () =>
+          // 10 minutes ago
+          s.listSubdomainRecords(parseInt(new Date().getTime()/1000) - 600)
+          .then(listing => listing.message)
+          .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains')))
       .catch( (err) => { console.log(err.stack) } )
   })
 
