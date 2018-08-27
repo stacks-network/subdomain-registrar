@@ -136,13 +136,52 @@ export function makeHTTPServer(config) {
     server.getSubdomainInfo(req.params.fullyQualified)
       .catch(error => {
         logger.error(error)
-        return { message: { error: 'Error processing request' },
-                 statusCode: 400 }
+        res.writeHead(404, HEADERS)
+        res.write(JSON.stringify(
+          {
+            message: { error: 'Error processing request' },
+            status: false
+          }))
+        res.end()
       })
       .then(infoResponse => {
         res.writeHead(infoResponse.statusCode, HEADERS)
         res.write(JSON.stringify(
           infoResponse.message))
+        res.end()
+      })
+  })
+
+  app.get('/list/:page', (req, res) => {
+    // page must be a reasonably-sized finite positive integer
+    let pageNum
+    try {
+      const page = req.params.page
+      if (!page.match(/^[0-9]{1,9}$/)) {
+        throw new Error('Page must be a reasonably-sized positive integer')
+      }
+      pageNum = parseInt(page)
+    }
+    catch(e) {
+      logger.error(e)
+      return { message: { error: 'Error procesing request' },
+               statusCode: 400 }
+    }
+
+    return server.listSubdomainRecords(pageNum)
+      .then((pages) => {
+        res.writeHead(200, HEADERS)
+        res.write(JSON.stringify(pages))
+        res.end()
+      })
+      .catch((e) => {
+        logger.error(e)
+        res.writeHead(400, HEADERS)
+        res.write(JSON.stringify(
+          {
+            message: { error: 'Error processing request' },
+            status: false
+          }))
         res.end()
       })
   })
