@@ -8,6 +8,9 @@ import { parseZoneFile } from 'zone-file'
 const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
 const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
 
+const testAddress2 = '1xME6Dp5boMe4xDxAJn1Gaat7d3k5hhdE'
+const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6db01'
+
 export function unitTestOperations() {
   test('destructing a zonefile', (t) => {
     t.plan(8)
@@ -65,11 +68,16 @@ export function unitTestOperations() {
                    [ { value: 10000,
                        tx_output_n: 1,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' },
-                     { value: 10000,
+                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+      
+    nock('https://blockchain.info')
+      .persist()
+      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
+      .reply(200, {unspent_outputs:
+                   [ { value: 10000,
                        tx_output_n: 2,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
 
     nock('https://blockchain.info')
       .persist()
@@ -85,8 +93,8 @@ export function unitTestOperations() {
       .reply(200, { address: '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq' })
 
     submitUpdate('bar.id', 'hello world',
-                 testSK, testSK)
-      .then(x => t.equal(x, 'a095def773f3f5db1685406c559bd3fd46822285d875a0e8bae64e31da3874e6'))
+                 testSK, testSK2)
+      .then(x => t.equal(x, '8b85c2b7c7b1d67fbf2a8617bb56c30f8f7f4ae022e6bb4106143c58cc272c22'))
   })
 
   test('checkTransactions', (t) => {
