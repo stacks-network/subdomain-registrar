@@ -411,6 +411,21 @@ export class SubdomainServer {
     })
   }
 
+  listSubdomainRecords(page: number) {
+    logger.debug(`Listing subdomain page ${page}`)
+    return this.db.listSubdomains(page)
+      .then((rows) => rows.map((row) => {
+        const formattedRow = {
+          name: `${row.subdomainName}.${this.domainName}`,
+          address: row.owner,
+          sequence: row.sequenceNumber,
+          zonefile: row.zonefile,
+          status: row.status
+        }
+        return formattedRow
+      }))
+  }
+
   shutdown() {
     return this.db.shutdown()
   }
