@@ -197,13 +197,16 @@ export class RegistrarQueueDB {
     return dbAll(this.db, lookup, [subdomainName])
   }
 
-  listSubdomains(page) {
+  listSubdomains(unixtime) {
     const listSQL = 'SELECT subdomainName, owner, sequenceNumber, zonefile, signature, ' +
-      'status, status_more, received_ts FROM subdomain_queue ORDER BY received_ts DESC ' +
-      'LIMIT ? OFFSET ?'
-    return dbAll(this.db, listSQL, [SUBDOMAIN_PAGE_SIZE, SUBDOMAIN_PAGE_SIZE * page])
-      .then((results) => results.map( // parse the sequenceNumber
-        x => Object.assign({}, x, { sequenceNumber: parseInt(x.sequenceNumber) })))
+      'status, status_more, received_ts FROM subdomain_queue WHERE ' +
+      'received_ts <= DATETIME(?, "unixepoch") ORDER BY received_ts DESC LIMIT ?'
+    return dbAll(this.db, listSQL, [unixtime, SUBDOMAIN_PAGE_SIZE])
+      .then((results) => results.map( // parse the sequenceNumber and timestamp
+        x => Object.assign({}, x, { 
+          sequenceNumber: parseInt(x.sequenceNumber),
+          receivedTimestamp: parseInt(new Date(`${x.received_ts} UTC`).getTime() / 1000)
+        })))
   }
 
   backupZonefile(zonefile: String) {
