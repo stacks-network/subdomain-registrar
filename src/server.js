@@ -420,7 +420,8 @@ export class SubdomainServer {
           address: row.owner,
           sequence: row.sequenceNumber,
           zonefile: row.zonefile,
-          status: row.status
+          status: row.status,
+          receivedTimestamp: row.receivedTimestamp
         }
         return formattedRow
       }))
