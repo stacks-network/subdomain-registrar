@@ -4,14 +4,15 @@ import nock from 'nock'
 import { SubdomainServer } from '../../lib/server'
 
 const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
-const testAddress2 = '1BUFjQVjkXpW5cSj1XZ8zh8XqeDVevjuLv'
+const testAddress2 = '1xME6Dp5boMe4xDxAJn1Gaat7d3k5hhdE'
 const testAddress3 = '1LmH1r8K62yZEjBtpbwU94yT3jLhLMiR1M'
 const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
+const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6db01'
 
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(16)
+    t.plan(22)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -130,6 +131,17 @@ export function testSubdomainServer() {
         () =>
           s.getSubdomainInfo('ba.bar.id')
           .then(resp => t.equal(resp.statusCode, 400)))
+      .then(
+        () => 
+          s.listSubdomainRecords(0)
+          .then(listing => {
+            t.equal(listing.length, 1, 'Should list 1 subdomain')
+            t.equal(listing[0].name, 'bar.bar.id', 'Should have bar in listing')
+            t.equal(listing[0].address, testAddress, 'Should have bar owned by the right addr')
+            t.equal(listing[0].sequence, 0, 'should have 0 sequence number')
+            t.equal(listing[0].zonefile, 'hello-world', 'should have correct zonefile')
+            t.equal(listing[0].status, 'submitted', 'should have correct status')
+          }))
       .catch( (err) => { console.log(err.stack) } )
   })
 
@@ -196,11 +208,16 @@ export function testSubdomainServer() {
                    [ { value: 10000,
                        tx_output_n: 1,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' },
-                     { value: 10000,
+                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+      
+    nock('https://blockchain.info')
+      .persist()
+      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
+      .reply(200, {unspent_outputs:
+                   [ { value: 10000,
                        tx_output_n: 2,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
 
     nock('https://blockchain.info')
       .persist()
@@ -214,7 +231,7 @@ export function testSubdomainServer() {
 
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
-                                  paymentKey: testSK,
+                                  paymentKey: testSK2,
                                   dbLocation: ':memory:',
                                   ipLimit: 0,
                                   proofsRequired: 0,
@@ -297,11 +314,16 @@ export function testSubdomainServer() {
                    [ { value: 10000,
                        tx_output_n: 1,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' },
-                     { value: 10000,
+                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+      
+    nock('https://blockchain.info')
+      .persist()
+      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
+      .reply(200, {unspent_outputs:
+                   [ { value: 10000,
                        tx_output_n: 2,
                        confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
+                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
 
     nock('https://blockchain.info')
       .persist()
@@ -315,7 +337,7 @@ export function testSubdomainServer() {
 
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
-                                  paymentKey: testSK,
+                                  paymentKey: testSK2,
                                   dbLocation: ':memory:',
                                   zonefileSize: 4096,
                                   ipLimit: 0,
