@@ -424,6 +424,7 @@ export class SubdomainServer {
         }
         return formattedRow
       }))
+      .then((rows) => ({ message: rows, statusCode: 200 }))
   }
 
   shutdown() {

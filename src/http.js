@@ -136,13 +136,9 @@ export function makeHTTPServer(config) {
     server.getSubdomainInfo(req.params.fullyQualified)
       .catch(error => {
         logger.error(error)
-        res.writeHead(404, HEADERS)
-        res.write(JSON.stringify(
-          {
-            message: { error: 'Error processing request' },
-            status: false
-          }))
-        res.end()
+        return { message: { error: 'Error processing request',
+                            status: false },
+                 statusCode: 400 }
       })
       .then(infoResponse => {
         res.writeHead(infoResponse.statusCode, HEADERS)
@@ -154,34 +150,24 @@ export function makeHTTPServer(config) {
 
   app.get('/list/:page', (req, res) => {
     // page must be a reasonably-sized finite positive integer
-    let pageNum
-    try {
+    return Promise.resolve().then(() => {
       const page = req.params.page
       if (!page.match(/^[0-9]{1,9}$/)) {
-        throw new Error('Page must be a reasonably-sized positive integer')
+        logger.warn('List page must be a reasonably-sized positive integer')
+        return { message: { error: 'Page must be a reasonably-sized positive integer' },
+                 statusCode: 400 }
       }
-      pageNum = parseInt(page)
-    }
-    catch(e) {
-      logger.error(e)
-      return { message: { error: 'Error procesing request' },
-               statusCode: 400 }
-    }
-
-    return server.listSubdomainRecords(pageNum)
-      .then((pages) => {
-        res.writeHead(200, HEADERS)
-        res.write(JSON.stringify(pages))
-        res.end()
-      })
+      return server.listSubdomainRecords(parseInt(page))
+    })
       .catch((e) => {
         logger.error(e)
-        res.writeHead(400, HEADERS)
-        res.write(JSON.stringify(
-          {
-            message: { error: 'Error processing request' },
-            status: false
-          }))
+        return { message: { error: 'Error processing request',
+                            status: false },
+                 statusCode: 400 }
+      })
+      .then((response) => {
+        res.writeHead(response.statusCode, HEADERS)
+        res.write(JSON.stringify(response.message))
         res.end()
       })
   })
