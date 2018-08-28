@@ -7,8 +7,6 @@ import { SubdomainServer } from './server'
 
 const HEADERS = { 'Content-Type': 'application/json' }
 
-const TIME_WEEK = 604800
-
 export function makeHTTPServer(config) {
   const app = express()
   const server = new SubdomainServer(config)
@@ -150,22 +148,16 @@ export function makeHTTPServer(config) {
       })
   })
 
-  app.get('/list/:unixtime', (req, res) => {
-    // unixTime must be a reasonably-sized finite positive integer
+  app.get('/list/:iterator', (req, res) => {
+    // iterator must be a reasonably-sized finite positive integer
     return Promise.resolve().then(() => {
-      const unixtime = req.params.unixtime
-      if (!unixtime.match(/^[0-9]{1,10}$/)) {
-        logger.warn('List UNIX time must be a reasonably-sized positive integer')
-        return { message: { error: 'UNIX time must be a reasonably-sized positive integer' },
+      const iterator = req.params.iterator
+      if (!iterator.match(/^[0-9]{1,10}$/)) {
+        logger.warn('List iteratotr must be a reasonably-sized positive integer')
+        return { message: { error: 'Iterator must be a reasonably-sized positive integer' },
                  statusCode: 400 }
       }
-      const unixDate = parseInt(unixtime)
-      if (unixDate < (new Date().getTime() / 1000) - TIME_WEEK) {
-        logger.warn('List UNIX time must be within the last week')
-        return { message: { error: 'UNIX time must be within the last week' },
-                 statusCode: 400 }
-      }
-      return server.listSubdomainRecords(parseInt(unixtime))
+      return server.listSubdomainRecords(parseInt(iterator))
     })
       .catch((e) => {
         logger.error(e)

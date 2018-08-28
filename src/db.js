@@ -16,6 +16,9 @@ const CREATE_QUEUE = `CREATE TABLE subdomain_queue (
 const CREATE_QUEUE_INDEX = `CREATE INDEX subdomain_queue_index ON
  subdomain_queue (subdomainName);`
 
+const CREATE_QUEUE_RECEIVED_INDEX = `CREATE INDEX subdomain_queue_received_index ON
+ subdomain_queue (received_ts);`
+
 const CREATE_MYZONEFILE_BACKUPS = `CREATE TABLE subdomain_zonefile_backups (
  backup_ix INTEGER PRIMARY KEY,
  zonefile TEXT NOT NULL,
@@ -119,6 +122,7 @@ export class RegistrarQueueDB {
         if (tables.indexOf('subdomain_queue') < 0) {
           toCreate.push(CREATE_QUEUE)
           toCreate.push(CREATE_QUEUE_INDEX)
+          toCreate.push(CREATE_QUEUE_RECEIVED_INDEX)
         }
         if (tables.indexOf('subdomain_zonefile_backups') < 0) {
           toCreate.push(CREATE_MYZONEFILE_BACKUPS)
@@ -197,15 +201,14 @@ export class RegistrarQueueDB {
     return dbAll(this.db, lookup, [subdomainName])
   }
 
-  listSubdomains(unixtime) {
+  listSubdomains(iterator, timeLimit) {
     const listSQL = 'SELECT subdomainName, owner, sequenceNumber, zonefile, signature, ' +
-      'status, status_more, received_ts FROM subdomain_queue WHERE ' +
-      'received_ts <= DATETIME(?, "unixepoch") ORDER BY received_ts DESC LIMIT ?'
-    return dbAll(this.db, listSQL, [unixtime, SUBDOMAIN_PAGE_SIZE])
+      'status, queue_ix FROM subdomain_queue WHERE ' +
+      'queue_ix >= ? AND received_ts >= DATETIME(?, "unixepoch") ORDER BY queue_ix LIMIT ?'
+    return dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE])
       .then((results) => results.map( // parse the sequenceNumber and timestamp
-        x => Object.assign({}, x, { 
-          sequenceNumber: parseInt(x.sequenceNumber),
-          receivedTimestamp: parseInt(new Date(`${x.received_ts} UTC`).getTime() / 1000)
+        x => Object.assign({}, x, {
+          sequenceNumber: parseInt(x.sequenceNumber)
         })))
   }
 

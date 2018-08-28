@@ -9,10 +9,25 @@ const testAddress3 = '1LmH1r8K62yZEjBtpbwU94yT3jLhLMiR1M'
 const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
 const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6db01'
 
+function dbRun(db: Object, cmd: String, args?: Array) {
+  if (!args) {
+    args = []
+  }
+  return new Promise((resolve, reject) => {
+    db.run(cmd, args, (err) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(24)
+    t.plan(23)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -132,8 +147,19 @@ export function testSubdomainServer() {
           s.getSubdomainInfo('ba.bar.id')
           .then(resp => t.equal(resp.statusCode, 400)))
       .then(
+        () => {
+          // insert a dummy stale one.
+          const time = 500
+          const dbCmd = 'INSERT INTO subdomain_queue ' +
+                '(subdomainName, owner, sequenceNumber, zonefile, status, received_ts)' +
+                ' VALUES (?, ?, ?, ?, ?, DATETIME(?, "unixepoch"))'
+          const dbArgs = ['shouldNotList', 'whatever', '54', 'zone', 'received', time]
+
+          return dbRun(s.db.db, dbCmd, dbArgs)
+        })
+      .then(
         () =>
-          s.listSubdomainRecords(new Date().getTime()/1000)
+          s.listSubdomainRecords(0)
           .then(response => {
             const listing = response.message
             t.equal(listing.length, 1, 'Should list 1 subdomain')
@@ -142,12 +168,11 @@ export function testSubdomainServer() {
             t.equal(listing[0].sequence, 0, 'should have 0 sequence number')
             t.equal(listing[0].zonefile, 'hello-world', 'should have correct zonefile')
             t.equal(listing[0].status, 'submitted', 'should have correct status')
-            t.ok(listing[0].receivedTimestamp > new Date().getTime()/1000 - 10, 'listing is recent')
           }))
       .then(
         () =>
-          // 10 minutes ago
-          s.listSubdomainRecords(parseInt(new Date().getTime()/1000) - 600)
+          // past the iterator.
+          s.listSubdomainRecords(parseInt(2))
           .then(listing => listing.message)
           .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains')))
       .catch( (err) => { console.log(err.stack) } )
