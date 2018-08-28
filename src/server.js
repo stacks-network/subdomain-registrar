@@ -6,6 +6,8 @@ import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './looku
 import ReadWriteLock from 'rwlock'
 import { RegistrarQueueDB } from './db'
 
+const TIME_WEEK = 604800
+
 export class SubdomainServer {
   domainName: string
   ownerKey: string
@@ -409,6 +411,25 @@ export class SubdomainServer {
            }
          })
     })
+  }
+
+  listSubdomainRecords(page: number) {
+    logger.debug(`Listing subdomain page ${page}`)
+    const timeLimit = (new Date().getTime() / 1000) - TIME_WEEK
+
+    return this.db.listSubdomains(page, timeLimit)
+      .then((rows) => rows.map((row) => {
+        const formattedRow = {
+          name: `${row.subdomainName}.${this.domainName}`,
+          address: row.owner,
+          sequence: row.sequenceNumber,
+          zonefile: row.zonefile,
+          status: row.status,
+          iterator: row.queue_ix
+        }
+        return formattedRow
+      }))
+      .then((rows) => ({ message: rows, statusCode: 200 }))
   }
 
   shutdown() {

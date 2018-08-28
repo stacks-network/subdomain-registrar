@@ -136,13 +136,38 @@ export function makeHTTPServer(config) {
     server.getSubdomainInfo(req.params.fullyQualified)
       .catch(error => {
         logger.error(error)
-        return { message: { error: 'Error processing request' },
+        return { message: { error: 'Error processing request',
+                            status: false },
                  statusCode: 400 }
       })
       .then(infoResponse => {
         res.writeHead(infoResponse.statusCode, HEADERS)
         res.write(JSON.stringify(
           infoResponse.message))
+        res.end()
+      })
+  })
+
+  app.get('/list/:iterator', (req, res) => {
+    // iterator must be a reasonably-sized finite positive integer
+    return Promise.resolve().then(() => {
+      const iterator = req.params.iterator
+      if (!iterator.match(/^[0-9]{1,10}$/)) {
+        logger.warn('List iteratotr must be a reasonably-sized positive integer')
+        return { message: { error: 'Iterator must be a reasonably-sized positive integer' },
+                 statusCode: 400 }
+      }
+      return server.listSubdomainRecords(parseInt(iterator))
+    })
+      .catch((e) => {
+        logger.error(e)
+        return { message: { error: 'Error processing request',
+                            status: false },
+                 statusCode: 400 }
+      })
+      .then((response) => {
+        res.writeHead(response.statusCode, HEADERS)
+        res.write(JSON.stringify(response.message))
         res.end()
       })
   })
