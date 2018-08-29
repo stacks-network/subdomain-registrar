@@ -16,6 +16,9 @@ const CREATE_QUEUE = `CREATE TABLE subdomain_queue (
 const CREATE_QUEUE_INDEX = `CREATE INDEX subdomain_queue_index ON
  subdomain_queue (subdomainName);`
 
+const CREATE_QUEUE_RECEIVED_INDEX = `CREATE INDEX subdomain_queue_received_index ON
+ subdomain_queue (received_ts);`
+
 const CREATE_MYZONEFILE_BACKUPS = `CREATE TABLE subdomain_zonefile_backups (
  backup_ix INTEGER PRIMARY KEY,
  zonefile TEXT NOT NULL,
@@ -37,6 +40,8 @@ const CREATE_IP_INFO = `CREATE TABLE ip_info (
 
 const CREATE_IP_INFO_INDEX = `CREATE INDEX ip_info_index ON
  ip_info (ip_address);`
+
+const SUBDOMAIN_PAGE_SIZE = 100
 
 function dbRun(db: Object, cmd: String, args?: Array) {
   if (!args) {
@@ -117,6 +122,7 @@ export class RegistrarQueueDB {
         if (tables.indexOf('subdomain_queue') < 0) {
           toCreate.push(CREATE_QUEUE)
           toCreate.push(CREATE_QUEUE_INDEX)
+          toCreate.push(CREATE_QUEUE_RECEIVED_INDEX)
         }
         if (tables.indexOf('subdomain_zonefile_backups') < 0) {
           toCreate.push(CREATE_MYZONEFILE_BACKUPS)
@@ -193,6 +199,17 @@ export class RegistrarQueueDB {
     const lookup = 'SELECT status, status_more, owner, zonefile FROM subdomain_queue' +
           ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
     return dbAll(this.db, lookup, [subdomainName])
+  }
+
+  listSubdomains(iterator, timeLimit) {
+    const listSQL = 'SELECT subdomainName, owner, sequenceNumber, zonefile, signature, ' +
+      'status, queue_ix FROM subdomain_queue WHERE ' +
+      'queue_ix >= ? AND received_ts >= DATETIME(?, "unixepoch") ORDER BY queue_ix LIMIT ?'
+    return dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE])
+      .then((results) => results.map( // parse the sequenceNumber and timestamp
+        x => Object.assign({}, x, {
+          sequenceNumber: parseInt(x.sequenceNumber)
+        })))
   }
 
   backupZonefile(zonefile: String) {
