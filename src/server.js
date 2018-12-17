@@ -1,12 +1,13 @@
 /* @flow */
 import logger from 'winston'
+import AsyncLock from 'async-lock'
 
 import { makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
 import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './lookups'
-import ReadWriteLock from 'rwlock'
 import { RegistrarQueueDB } from './db'
 
 const TIME_WEEK = 604800
+const QUEUE_LOCK = 'queue'
 
 export class SubdomainServer {
   domainName: string
@@ -20,7 +21,7 @@ export class SubdomainServer {
   nameMinLength: number
   proofsRequired: number
   db: RegistrarQueueDB
-  lock: ReadWriteLock
+  lock: AsyncLock
 
   constructor(config: {domainName: string, ownerKey: string,
                        paymentKey: string, dbLocation: string,
@@ -53,7 +54,7 @@ export class SubdomainServer {
     this.nameMinLength = config.nameMinLength
     this.proofsRequired = config.proofsRequired
     this.db = new RegistrarQueueDB(config.dbLocation)
-    this.lock = new ReadWriteLock()
+    this.lock = new AsyncLock()
   }
 
   initializeServer() {
@@ -178,31 +179,27 @@ export class SubdomainServer {
         }
       })
       .then(() => {
-        return new Promise((resolve, reject) => {
-          this.lock.writeLock((release) => {
-            logger.debug('Obtained lock to register.')
-            this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
-              .then(() => {
-                logger.info(`Logging requestor info (ip= ${JSON.stringify(ipAddress)} owner=${owner}`)
-                return this.db.logRequestorData(subdomainName, owner, ipAddress)
-              })
-              .catch((err) => {
-                logger.error(`Setting status for ${subdomainName} as errored.`)
-                this.db.updateStatusFor([subdomainName], 'Error logging ip info', '')
-                throw err
-              })
-              .then(() => {
-                logger.info(`Queued operation on ${subdomainName}: owner= ${owner}` +
-                                 ` seqn= ${sequenceNumber} zf= ${zonefile}`)
-                resolve()
-              })
-              .catch((err) => {
-                logger.error(`Error processing registration: ${err}`)
-                logger.error(err.stack)
-                reject(err)
-              })
-              .then(() => release())
-          })
+        return this.lock.acquire(QUEUE_LOCK, () => {
+          logger.debug('Obtained lock to register.')
+          return this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
+            .then(() => {
+              logger.info(`Logging requestor info (ip= ${JSON.stringify(ipAddress)} owner=${owner}`)
+              return this.db.logRequestorData(subdomainName, owner, ipAddress)
+            })
+            .catch((err) => {
+              logger.error(`Setting status for ${subdomainName} as errored.`)
+              this.db.updateStatusFor([subdomainName], 'Error logging ip info', '')
+              throw err
+            })
+            .then(() => {
+              logger.info(`Queued operation on ${subdomainName}: owner= ${owner}` +
+                          ` seqn= ${sequenceNumber} zf= ${zonefile}`)
+            })
+            .catch((err) => {
+              logger.error(`Error processing registration: ${err}`)
+              logger.error(err.stack)
+              throw err
+            })
         })
       })
   }
@@ -270,66 +267,65 @@ export class SubdomainServer {
   }
 
   submitBatch() : Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.lock.writeLock((release) => {
-        logger.debug('Obtained lock, fetching queue.')
-        this.fetchQueue()
-          .then(queue => {
-            return Promise.all(
-              queue.map(subdomainOp => isRegistrationValid(
-                subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
-                parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile)))
-              .then(results => {
-                const valid = queue.filter((op, opIndex) => results[opIndex])
-                const invalid = queue.filter((op, opIndex) => !results[opIndex])
-                invalid.forEach(
-                  op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
-                                    'because it is not valid:' +
-                                    ` seqn=${op.sequenceNumber} zf=${op.zonefile}`))
-                return valid
-              })
-          })
-          .then(queue => {
-            if (queue.length === 0) {
-              logger.debug(`${queue.length} items in the queue.`)
-              return null
-            }
-            logger.info(`${queue.length} items in the queue.`)
-            const update = makeUpdateZonefile(this.domainName, this.uriEntries,
-                                              queue, this.zonefileSize)
-            const zonefile = update.zonefile
-            const updatedFromQueue = update.submitted
-            logger.info(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
-            return this.backupZonefile(zonefile)
-              .then(() => submitUpdate(this.domainName, zonefile,
-                                       this.ownerKey, this.paymentKey))
-              .then((txHash) => {
-                logger.info(txHash)
-                return this.updateQueueStatus(updatedFromQueue, txHash)
-              })
-              .then((txHash) => this.addTransactionToTrack(txHash, zonefile))
-          })
-          .then(txHash => {
-            if (txHash) {
-              logger.info(`Batch submitted in txid: ${txHash}`)
-            } else {
-              logger.debug('No batch submitted')
-            }
-            resolve(txHash)
-          })
-          .catch((err) => {
-            logger.error(`Failed to submit batch: ${err}`)
-            logger.error(err.stack)
-            reject(err)
-          })
-          .then(() => release())
-      }, { timeout: 1,
-           timeoutCallback: () => {
-             logger.error('Batch submission failed: could not obtain lock.')
-             reject(new Error('Failed to obtain lock'))
-           }
-         })
-    })
+    return this.lock.acquire(QUEUE_LOCK, () => {
+      logger.debug('Obtained lock, fetching queue.')
+      return this.fetchQueue()
+        .then(queue => {
+          return Promise.all(
+            queue.map(subdomainOp => isRegistrationValid(
+              subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
+              parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile)))
+            .then(results => {
+              const valid = queue.filter((op, opIndex) => results[opIndex])
+              const invalid = queue.filter((op, opIndex) => !results[opIndex])
+              invalid.forEach(
+                op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
+                                  'because it is not valid:' +
+                                  ` seqn=${op.sequenceNumber} zf=${op.zonefile}`))
+              return valid
+            })
+        })
+        .then(queue => {
+          if (queue.length === 0) {
+            logger.debug(`${queue.length} items in the queue.`)
+            return null
+          }
+          logger.info(`${queue.length} items in the queue.`)
+          const update = makeUpdateZonefile(this.domainName, this.uriEntries,
+                                            queue, this.zonefileSize)
+          const zonefile = update.zonefile
+          const updatedFromQueue = update.submitted
+          logger.info(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
+          return this.backupZonefile(zonefile)
+            .then(() => submitUpdate(this.domainName, zonefile,
+                                     this.ownerKey, this.paymentKey))
+            .then((txHash) => {
+              logger.info(txHash)
+              return this.updateQueueStatus(updatedFromQueue, txHash)
+            })
+            .then((txHash) => this.addTransactionToTrack(txHash, zonefile))
+        })
+        .then(txHash => {
+          if (txHash) {
+            logger.info(`Batch submitted in txid: ${txHash}`)
+          } else {
+            logger.debug('No batch submitted')
+          }
+          return txHash
+        })
+        .catch((err) => {
+          logger.error(`Failed to submit batch: ${err}`)
+          logger.error(err.stack)
+          throw err
+        })
+    }, { timeout: 1 })
+      .catch((err) => {
+        if (err && err.message && err.message == 'async-lock timed out') {
+          throw new Error('Failed to obtain lock')
+        } else {
+          throw err
+        }
+      })
   }
 
   getSubdomainInfo(fullyQualifiedName: string) {
@@ -378,39 +374,36 @@ export class SubdomainServer {
 
   checkZonefiles() {
     logger.debug('Checking for outstanding transactions.')
-    return new Promise((resolve, reject) => {
-      this.lock.writeLock((release) => {
-        logger.debug('Obtained lock, checking transactions.')
+    return this.lock.acquire(QUEUE_LOCK, () => {
+      logger.debug('Obtained lock, checking transactions.')
 
-        this.db.getTrackedTransactions()
-          .then(entries => {
-            if (entries.length > 0) {
-              logger.info(`${entries.length} outstanding transactions.`)
-            } else {
-              logger.debug(`${entries.length} outstanding transactions.`)
-            }
-            return checkTransactions(entries)
-          })
-          .then(txStatuses => this.markTransactionsComplete(
-            txStatuses.filter(x => x.status)))
-          .then(() => {
-            resolve()
-          })
-          .catch((err) => {
-            logger.error(`Failure trying to publish zonefiles: ${err}`)
-            logger.error(err.stack)
-            reject(new Error(`Failed to check transaction status: ${err}`))
-          })
-          .then(() => {
-            release()
-            logger.debug('Lock released')
-          })
-      }, { timeout: 1,
-           timeoutCallback: () => {
-             reject(new Error('Failed to obtain lock'))
-           }
-         })
-    })
+      return this.db.getTrackedTransactions()
+        .then(entries => {
+          if (entries.length > 0) {
+            logger.info(`${entries.length} outstanding transactions.`)
+          } else {
+            logger.debug(`${entries.length} outstanding transactions.`)
+          }
+          return checkTransactions(entries)
+        })
+        .then(txStatuses => {
+          this.markTransactionsComplete(
+            txStatuses.filter(x => x.status))
+          logger.debug('Lock released')
+        })
+        .catch((err) => {
+          logger.error(`Failure trying to publish zonefiles: ${err}`)
+          logger.error(err.stack)
+          throw new Error(`Failed to check transaction status: ${err}`)
+        })
+    }, { timeout: 1 })
+      .catch((err) => {
+        if (err && err.message && err.message == 'async-lock timed out') {
+          throw new Error('Failed to obtain lock')
+        } else {
+          throw err
+        }
+      })
   }
 
   listSubdomainRecords(page: number) {

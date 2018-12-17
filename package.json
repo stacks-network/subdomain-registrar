@@ -4,13 +4,13 @@
   "description": "A subdomain registrar for Blockstack",
   "main": "lib/index.js",
   "dependencies": {
+    "async-lock": "^1.1.3",
     "bitcoinjs-lib": "^3.3.2",
     "blockstack": "^17.2.0",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "node-fetch": "^2.0.0",
     "ripemd160": "^2.0.1",
-    "rwlock": "^5.0.0",
     "sqlite3": "^4.0.2",
     "winston": "^2.4.0",
     "zone-file": "^0.2.3"

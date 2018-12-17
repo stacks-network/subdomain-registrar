@@ -288,33 +288,39 @@ export function testSubdomainServer() {
           .times(1)
           .reply(200, { status: 'registered_subdomain'})
       })
-      .then(() => s.lock.writeLock((release) => {
-        s.submitBatch()
-          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-          .catch((err) => {
-            t.equal(err.message, 'Failed to obtain lock')
-            release()
+      .then(() => {
+        const acquiredWait = s.lock.acquire('queue', () => {
+          return new Promise(resolve => {
+            setTimeout(() => resolve(), 5000)
           })
-          .then(() => s.submitBatch())
-          .then(() => t.ok(true, 'Should have submitted a batch'))
-          .catch(() => t.ok(false, 'Should not have failed'))
-          .then(() => {
-            nock('https://core.blockstack.org')
-              .get('/v1/names/foo.bar.id')
-              .times(1)
-              .reply(404, {})
-          })
-          .then(() => s.getSubdomainStatus('bar')
-                .then((x) =>
-                      t.ok(x.status.startsWith('Your subdomain was registered in transaction'),
-                           `status should update, but was still: ${x.status}`)))
-          .then(() => s.getSubdomainStatus('foo')
-                .then((x) =>
-                      t.ok(x.status.startsWith('Subdomain is queued'),
-                           `foo.bar.id should still be queued for update`)))
-      }))
+        })
 
-    })
+        const failureBatch = s.submitBatch()
+              .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+              .catch((err) => {
+                t.equal(err.message, 'Failed to obtain lock')
+              })
+
+        return Promise.all([acquiredWait, failureBatch])
+      })
+      .then(() => s.submitBatch())
+      .then(() => t.ok(true, 'Should have submitted a batch'))
+      .catch(() => t.ok(false, 'Should not have failed'))
+      .then(() => {
+        nock('https://core.blockstack.org')
+          .get('/v1/names/foo.bar.id')
+          .times(1)
+          .reply(404, {})
+      })
+      .then(() => s.getSubdomainStatus('bar')
+            .then((x) =>
+                  t.ok(x.status.startsWith('Your subdomain was registered in transaction'),
+                       `status should update, but was still: ${x.status}`)))
+      .then(() => s.getSubdomainStatus('foo')
+            .then((x) =>
+                  t.ok(x.status.startsWith('Subdomain is queued'),
+                       `foo.bar.id should still be queued for update`)))
+  })
 
   test('submitBatch not owned', (t) => {
     t.plan(7)
@@ -323,7 +329,7 @@ export function testSubdomainServer() {
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/bar.id')
-      .reply(200, { address: '1xxxxxxxxx' })
+      .reply(200, { address: '16LToaDSxQaar4LBbdgQpq2vn2FbFMcpuP' })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
@@ -348,7 +354,7 @@ export function testSubdomainServer() {
                        tx_output_n: 1,
                        confirmations: 100,
                        tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
-      
+
     nock('https://blockchain.info')
       .persist()
       .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
@@ -394,31 +400,37 @@ export function testSubdomainServer() {
           .times(1)
           .reply(200, {})
       })
-      .then(() => s.lock.writeLock((release) => {
-        s.submitBatch()
-          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-          .catch((err) => {
-            t.equal(err.message, 'Failed to obtain lock')
-            release()
+      .then(() => {
+        const acquiredWait = s.lock.acquire('queue', () => {
+          return new Promise(resolve => {
+            setTimeout(() => resolve(), 5000)
           })
-          .then(() => s.submitBatch())
-          .then(() => t.ok(false, 'Should not have submitted a batch'))
-          .catch(() => t.ok(true, 'Should have failed'))
-          .then(() => {
-            nock('https://core.blockstack.org')
-              .get('/v1/names/foo.bar.id')
-              .times(1)
-              .reply(404, {})
-          })
-          .then(() => s.getSubdomainStatus('bar')
-                .then((x) =>
-                      t.ok(x.status.startsWith('Subdomain is queued'),
-                           `bar.bar.id should still be queued for update`)))
-          .then(() => s.getSubdomainStatus('foo')
-                .then((x) =>
-                      t.ok(x.status.startsWith('Subdomain is queued'),
-                           `foo.bar.id should still be queued for update`)))
-      }))
+        })
 
-    })
+        const failureBatch = s.submitBatch()
+              .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+              .catch((err) => {
+                t.equal(err.message, 'Failed to obtain lock')
+              })
+
+        return Promise.all([acquiredWait, failureBatch])
+      })
+      .then(() => s.submitBatch())
+      .then(() => t.ok(false, 'Should not have submitted a batch'))
+      .catch(() => t.ok(true, 'Should have failed'))
+      .then(() => {
+        nock('https://core.blockstack.org')
+          .get('/v1/names/foo.bar.id')
+          .times(1)
+          .reply(404, {})
+      })
+      .then(() => s.getSubdomainStatus('bar')
+            .then((x) =>
+                  t.ok(x.status.startsWith('Subdomain is queued'),
+                       `bar.bar.id should still be queued for update`)))
+      .then(() => s.getSubdomainStatus('foo')
+            .then((x) =>
+                  t.ok(x.status.startsWith('Subdomain is queued'),
+                       `foo.bar.id should still be queued for update`)))
+  })
 }
