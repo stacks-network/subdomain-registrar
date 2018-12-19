@@ -200,7 +200,14 @@ export class SubdomainServer {
               logger.error(err.stack)
               throw err
             })
-        })
+        }, { timeout: 5000 })
+          .catch((err) => {
+            if (err && err.message && err.message == 'async-lock timed out') {
+              throw new Error('Failed to obtain lock')
+            } else {
+              throw err
+            }
+          })
       })
   }
 
@@ -318,7 +325,7 @@ export class SubdomainServer {
           logger.error(err.stack)
           throw err
         })
-    }, { timeout: 1 })
+    }, { timeout: 5000 })
       .catch((err) => {
         if (err && err.message && err.message == 'async-lock timed out') {
           throw new Error('Failed to obtain lock')

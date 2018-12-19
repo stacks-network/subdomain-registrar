@@ -291,7 +291,7 @@ export function testSubdomainServer() {
       .then(() => {
         const acquiredWait = s.lock.acquire('queue', () => {
           return new Promise(resolve => {
-            setTimeout(() => resolve(), 5000)
+            setTimeout(() => resolve(), 9000)
           })
         })
 
@@ -403,7 +403,7 @@ export function testSubdomainServer() {
       .then(() => {
         const acquiredWait = s.lock.acquire('queue', () => {
           return new Promise(resolve => {
-            setTimeout(() => resolve(), 5000)
+            setTimeout(() => resolve(), 9000)
           })
         })
 
