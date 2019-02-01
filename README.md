@@ -60,6 +60,18 @@ In order to support registration requests from "trusted sources", you can use th
 to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
 skip the spam countermeasures.
 
+### Whitelisting IP Addresses
+
+If you add a key to your `config.json` file, you can whitelist IPs against your spam counter measures, e.g.:
+
+```
+{
+  ...
+  "ipWhitelist": ["127.0.0.1"],
+  ...
+}
+```
+
 ### Private Key Storage
 
 You can either store your private key hexes in your config.json, or pass them
