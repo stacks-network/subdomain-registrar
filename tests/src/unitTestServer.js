@@ -27,7 +27,7 @@ function dbRun(db: Object, cmd: String, args?: Array) {
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
-    t.plan(23)
+    t.plan(26)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -55,12 +55,26 @@ export function testSubdomainServer() {
       .get('/v1/names/tar.bar.id')
       .reply(404, {})
 
+    nock('https://core.blockstack.org')
+      .persist()
+      .get('/v1/names/ipwhitelisted0.bar.id')
+      .reply(404, {})
+    nock('https://core.blockstack.org')
+      .persist()
+      .get('/v1/names/ipwhitelisted1.bar.id')
+      .reply(404, {})
+    nock('https://core.blockstack.org')
+      .persist()
+      .get('/v1/names/ipwhitelisted2.bar.id')
+      .reply(404, {})
+
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
                                   paymentKey: testSK,
                                   dbLocation: ':memory:',
                                   domainUri: 'http://myfreewebsite.com',
                                   ipLimit: 1,
+                                  ipWhitelist: ['whitelisted-ip-addr'],
                                   proofsRequired: 0,
                                   apiKeys: ['abcdefghijk'],
                                   zonefileSize: 4096,
@@ -175,6 +189,28 @@ export function testSubdomainServer() {
           s.listSubdomainRecords(parseInt(2))
           .then(listing => listing.message)
           .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains')))
+      .then(
+        () =>
+          s.queueRegistration('ipwhitelisted0', '1HcfvNyox5GuPiPKbkPjg9cAADC76gMhMR',
+                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+          .then(() => t.ok(true, 'should queue first whitelisted address'))
+          .catch((err) => { console.log(err.stack)
+                            t.ok(false, 'should be able to queue') }))
+      .then(
+        () =>
+          s.queueRegistration('ipwhitelisted1', '12VTJa2i13CMf1mj5SCHZG5EwZ7ArwNTSb',
+                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+          .then(() => t.ok(true, 'should queue 2nd whitelisted address'))
+          .catch((err) => { console.log(err.stack)
+                            t.ok(false, 'should be able to queue') }))
+      .then(
+        () =>
+          s.queueRegistration('ipwhitelisted2', '16AWWF4UC9u6DQUthLsCDoEv89f9M5iVZe',
+                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+          .then(() => t.ok(true, 'should queue 3rd whitelisted address'))
+          .catch((err) => { console.log(err.stack)
+                            t.ok(false, 'should be able to queue') }))
+
       .catch( (err) => { console.log(err.stack) } )
   })
 
