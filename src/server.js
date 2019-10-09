@@ -152,7 +152,7 @@ export class SubdomainServer {
 
   queueRegistration(subdomainName: string, owner: string,
                     sequenceNumber: number, zonefile: string,
-                    ipAddress: ?string = '', authorization: ?string = '') {
+                    ipAddress: string = '', authorization: ?string = '') {
     return this.isSubdomainInQueue(subdomainName)
       .then((inQueue) => {
         if (inQueue) {
@@ -183,7 +183,7 @@ export class SubdomainServer {
           logger.debug('Obtained lock to register.')
           return this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
             .then(() => {
-              logger.info(`Logging requestor info (ip= ${JSON.stringify(ipAddress)} owner=${owner}`)
+              logger.info(`Logging requestor info (ip= ${ipAddress} owner=${owner}`)
               return this.db.logRequestorData(subdomainName, owner, ipAddress)
             })
             .catch((err) => {

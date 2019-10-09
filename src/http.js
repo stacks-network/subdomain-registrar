@@ -5,11 +5,22 @@ import logger from 'winston'
 
 import { SubdomainServer } from './server'
 
+import { createMiddleware as createPrometheusMiddleware } from '@promster/express'
+import { createServer } from '@promster/server'
+
 const HEADERS = { 'Content-Type': 'application/json' }
 
 export function makeHTTPServer(config) {
   const app = express()
   const server = new SubdomainServer(config)
+
+  if (config.prometheus && config.prometheus.start && config.prometheus.port) {
+    app.use(createPrometheusMiddleware({ app }))
+    const port = config.prometheus.port
+
+    // Create `/metrics` endpoint on separate server
+    createServer({ port }).then(() => console.log(`@promster/server started on port ${port}.`))
+  }
 
   app.use(cors())
   app.use(bodyParser.json())
