@@ -17,6 +17,7 @@ export class SubdomainServer {
   uriEntries: Array<{ name: string, target: string, priority: number, weight: number}>
   disableRegistrationsWithoutKey: boolean
   apiKeys: Array<string>
+  ipWhitelist: Array<string>
   ipLimit: number
   nameMinLength: number
   proofsRequired: number
@@ -30,11 +31,13 @@ export class SubdomainServer {
                        ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
                        apiKeys?: Array<string>,
+                       ipWhitelist?: Array<string>,
                        nameMinLength: number}) {
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
     this.zonefileSize = config.zonefileSize
+    this.ipWhitelist = config.ipWhitelist ? config.ipWhitelist : []
     this.uriEntries = []
     if (config.domainUri) {
       this.uriEntries.push({ name: '_http._tcp',
@@ -108,13 +111,17 @@ export class SubdomainServer {
           if (!ipAddress) {
             return 'IP limiting in effect, and no IP address detected for request.'
           } else {
-            ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
-              .then((ipCount) => {
-                if (ipCount >= this.ipLimit) {
-                  return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
-                }
-                return false
-              })
+            if (this.ipWhitelist && this.ipWhitelist.includes(ipAddress)) {
+              ipLimiterPromise = Promise.resolve(false)
+            } else {
+              ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
+                .then((ipCount) => {
+                  if (ipCount >= this.ipLimit) {
+                    return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
+                  }
+                  return false
+                })
+            }
           }
         }
 

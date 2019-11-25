@@ -8,6 +8,7 @@
   "port": 3000,
   "disableRegistrationsWithoutKey": false,
   "apiKeys": ["6b22b2c7-8258-4ff9-8ff1-19f1f9f0148a"],
+  "ipWhitelist": ["127.0.0.1"],
   "winstonConsoleTransport": {
       "level": "info",
       "handleExceptions": false,
