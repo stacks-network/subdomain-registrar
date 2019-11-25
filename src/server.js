@@ -97,7 +97,8 @@ export class SubdomainServer {
         if (authorization && authorization.startsWith('bearer ')) {
           const apiKey = authorization.slice('bearer '.length)
           if (this.apiKeys.includes(apiKey)) {
-            logger.info('Passed spam checks with API key')
+            logger.info('Passed spam checks with API key',
+                        { msgType: 'spam_pass', reason: 'api_key' , apiKey: apiKey.slice(0,5)})
             return Promise.resolve(false)
           }
         }
@@ -117,6 +118,8 @@ export class SubdomainServer {
               ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
                 .then((ipCount) => {
                   if (ipCount >= this.ipLimit) {
+                    logger.warn('IP limited by spam filter',
+                                { msgType: 'spam_fail', reason: 'ip_count', ip: ipAddress })
                     return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
                   }
                   return false
@@ -134,7 +137,8 @@ export class SubdomainServer {
               return false
             } else {
               logger.warn(`Discarding operation for ${subdomainName}` +
-                          ` because subdomain shorter than ${this.nameMinLength} characters.`)
+                          ` because subdomain shorter than ${this.nameMinLength} characters.`,
+                          { msgType: 'spam_fail', reason: 'name_length', ip: ipAddress })
               return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
             }
           })
@@ -145,6 +149,8 @@ export class SubdomainServer {
             return checkProofs(owner, zonefile)
               .then((proofsValid) => {
                 if (proofsValid.length < this.proofsRequired) {
+                  logger.warn('Proofs required for passing spam-check',
+                              { msgType: 'spam_fail', reason: 'proofs', ip: ipAddress })
                   return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`
                 }
                 return false
@@ -163,8 +169,8 @@ export class SubdomainServer {
     return this.isSubdomainInQueue(subdomainName)
       .then((inQueue) => {
         if (inQueue) {
-          logger.warn(`Requested operation for ${subdomainName}, but op` +
-                           ' is already in queue for this name.')
+          logger.warn(`Name queued already: ${subdomainName}`,
+                      { msgType: 'repeat_name', name: subdomainName, ip: ipAddress })
           throw new Error('Subdomain operation already queued for this name.')
         }
         return isRegistrationValid(
@@ -181,16 +187,13 @@ export class SubdomainServer {
       })
       .then((spamFailure) => {
         if (spamFailure) {
-          logger.warn(`${subdomainName} failed spam-check: ${spamFailure}`)
           throw new Error(spamFailure)
         }
       })
       .then(() => {
         return this.lock.acquire(QUEUE_LOCK, () => {
-          logger.debug('Obtained lock to register.')
           return this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
             .then(() => {
-              logger.info(`Logging requestor info (ip= ${ipAddress} owner=${owner}`)
               return this.db.logRequestorData(subdomainName, owner, ipAddress)
             })
             .catch((err) => {
@@ -199,8 +202,8 @@ export class SubdomainServer {
               throw err
             })
             .then(() => {
-              logger.info(`Queued operation on ${subdomainName}: owner= ${owner}` +
-                          ` seqn= ${sequenceNumber} zf= ${zonefile}`)
+              logger.info('Queued registration request.',
+                          { msgType: 'queued', name: subdomainName, owner, ip: ipAddress })
             })
             .catch((err) => {
               logger.error(`Error processing registration: ${err}`)
@@ -210,6 +213,8 @@ export class SubdomainServer {
         }, { timeout: 5000 })
           .catch((err) => {
             if (err && err.message && err.message == 'async-lock timed out') {
+              logger.error('Failure acquiring registration lock',
+                           { msgType: 'lock_acquire_fail' })
               throw new Error('Failed to obtain lock')
             } else {
               throw err
@@ -267,7 +272,8 @@ export class SubdomainServer {
 
   markTransactionsComplete(entries: Array<{txHash: string}>) {
     if (entries.length > 0) {
-      logger.info(`${entries.length} transactions newly finished.`)
+      logger.info(`${entries.length} transactions newly finished.`,
+                  { msgType: 'tx_finish', count: entries.length })
     } else {
       logger.debug(`${entries.length} transactions newly finished.`)
       return Promise.resolve()
@@ -294,8 +300,8 @@ export class SubdomainServer {
               const invalid = queue.filter((op, opIndex) => !results[opIndex])
               invalid.forEach(
                 op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
-                                  'because it is not valid:' +
-                                  ` seqn=${op.sequenceNumber} zf=${op.zonefile}`))
+                                  'because it is not valid.',
+                                  { msgType: 'skip_batch_inclusion', name: op.subdomainName }))
               return valid
             })
         })
@@ -304,24 +310,27 @@ export class SubdomainServer {
             logger.debug(`${queue.length} items in the queue.`)
             return null
           }
-          logger.info(`${queue.length} items in the queue.`)
+          logger.info(`Constructing batch with ${queue.length} currently queued.`,
+                      { msgType: 'begin_batch', currentQueue: queue.length })
           const update = makeUpdateZonefile(this.domainName, this.uriEntries,
                                             queue, this.zonefileSize)
           const zonefile = update.zonefile
           const updatedFromQueue = update.submitted
-          logger.info(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
+          logger.debug(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
+          logger.info(`Batch will contain ${updatedFromQueue.length} entries.`,
+                      { msgType: 'built_batch', currentQueue: queue.length, batchSize: updatedFromQueue.length })
+
           return this.backupZonefile(zonefile)
             .then(() => submitUpdate(this.domainName, zonefile,
                                      this.ownerKey, this.paymentKey))
             .then((txHash) => {
-              logger.info(txHash)
               return this.updateQueueStatus(updatedFromQueue, txHash)
             })
             .then((txHash) => this.addTransactionToTrack(txHash, zonefile))
         })
         .then(txHash => {
           if (txHash) {
-            logger.info(`Batch submitted in txid: ${txHash}`)
+            logger.info('Batch submitted', { msgType: 'batch_submitted', txid: txHash })
           } else {
             logger.debug('No batch submitted')
           }
@@ -394,7 +403,8 @@ export class SubdomainServer {
       return this.db.getTrackedTransactions()
         .then(entries => {
           if (entries.length > 0) {
-            logger.info(`${entries.length} outstanding transactions.`)
+            logger.info(`${entries.length} outstanding transactions.`,
+                        { msgType: 'outstanding_tx', count: entries.length })
           } else {
             logger.debug(`${entries.length} outstanding transactions.`)
           }

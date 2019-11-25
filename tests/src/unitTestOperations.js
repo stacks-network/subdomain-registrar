@@ -101,8 +101,8 @@ export function unitTestOperations() {
     t.plan(1)
 
     let txs = [{hash: 'txhash-0', height: 289},
-               {hash: 'txhash-1', height: 294},
-               {hash: 'txhash-2', height: 295}]
+               {hash: 'txhash-1', height: 293},
+               {hash: 'txhash-2', height: 294}]
         .map(x => ({ zonefile: 'hello world',
                      txHash: x.hash,
                      blockheight: x.height }))
