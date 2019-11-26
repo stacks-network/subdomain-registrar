@@ -96,55 +96,56 @@ export function makeUpdateZonefile(
            submitted }
 }
 
-export function submitUpdate(
+export async function submitUpdate(
   domainName: string,
   zonefile: string,
   ownerKey: string,
   paymentKey: string) {
   const ownerAddress = hexStringToECPair(ownerKey).getAddress()
-  return safety.ownsName(domainName, ownerAddress)
-    .then((ownsName) => {
-      if (!ownsName) {
-        throw new Error(`Domain name ${domainName} not owned by address ${ownerAddress}`)
-      }
-      return transactions.makeUpdate(domainName, ownerKey, paymentKey, zonefile)
-    })
-    .then(txHex => bskConfig.network.broadcastTransaction(txHex))
+  const ownsName = await safety.ownsName(domainName, ownerAddress)
+
+  if (!ownsName) {
+    throw new Error(`Domain name ${domainName} not owned by address ${ownerAddress}`)
+  }
+
+  const txHex = await transactions.makeUpdate(domainName, ownerKey, paymentKey, zonefile)
+
+  return await bskConfig.network.broadcastTransaction(txHex)
 }
 
-export function checkTransactions(txs: Array<{txHash: string, zonefile: string}>):
+export async function checkTransactions(txs: Array<{txHash: string, zonefile: string}>):
 Promise<Array<{txHash: string, status: boolean}>> {
-  return bskConfig.network.getBlockHeight()
-    .then(
-      blockHeight => Promise.all(txs.map(
-        tx => bskConfig.network.getTransactionInfo(tx.txHash)
-          .then(txInfo => {
-            if (! txInfo.block_height) {
-              logger.info('Could not get block_height, probably unconfirmed.',
-                          { msgType: 'unconfirmed', txid: tx.txHash })
-              return Promise.resolve({ txHash: tx.txHash, status: false })
-            } else if (txInfo.block_height + 7 > blockHeight) {
-              logger.debug(`block_height for ${tx.txHash}: ${txInfo.block_height} --- has ${1 + blockHeight - txInfo.block_height} confirmations`)
-              return Promise.resolve({ txHash: tx.txHash, status: false })
-            } else {
-              if (bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org') {
-                return directlyPublishZonefile(tx.zonefile)
-                  // this is horrible. I know. but the reasons have to do with load balancing
-                  // on node.blockstack.org and Atlas peering.
-                  .then(() => directlyPublishZonefile(tx.zonefile))
-                  .then(() => ({ txHash: tx.txHash, status: true }))
-              } else {
-                return bskConfig.network.broadcastZoneFile(tx.zonefile)
-                  .then(() => ({ txHash: tx.txHash, status: true }))
-              }
-            }
-          })
-          .catch(err => {
-            logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
-            return Promise.resolve({ txHash: tx.txHash, status: false})
-          })
-      ))
-    )
+
+  const blockHeight = await bskConfig.network.getBlockHeight()
+
+  return await Promise.all(
+    txs.map(async (tx) => {
+      const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
+      if (! txInfo.block_height) {
+        logger.info('Could not get block_height, probably unconfirmed.',
+                    { msgType: 'unconfirmed', txid: tx.txHash })
+        return { txHash: tx.txHash, status: false }
+      } else if (txInfo.block_height + 7 > blockHeight) {
+        logger.debug(`block_height for ${tx.txHash}: ${txInfo.block_height} --- has ${1 + blockHeight - txInfo.block_height} confirmations`)
+        return { txHash: tx.txHash, status: false }
+      } else {
+        try {
+          if (bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org') {
+            await directlyPublishZonefile(tx.zonefile)
+            // this is horrible. I know. but the reasons have to do with load balancing
+            // on node.blockstack.org and Atlas peering.
+            await directlyPublishZonefile(tx.zonefile)
+            return { txHash: tx.txHash, status: true }
+          } else {
+            await bskConfig.network.broadcastZoneFile(tx.zonefile)
+            return { txHash: tx.txHash, status: true }
+          }
+        } catch (err) {
+          logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
+          return { txHash: tx.txHash, status: false}
+        }
+      }
+    }))
 }
 
 export function hash160(input: Buffer) {
@@ -154,7 +155,7 @@ export function hash160(input: Buffer) {
 
 // this is a hack -- this is a stand-in while we roll out support for
 //   publishing zonefiles via core.blockstack
-export function directlyPublishZonefile(zonefile: string) {
+export async function directlyPublishZonefile(zonefile: string): Promise<boolean> {
   // speak directly to node.blockstack
 
   const b64Zonefile = Buffer.from(zonefile).toString('base64')
@@ -165,45 +166,43 @@ export function directlyPublishZonefile(zonefile: string) {
          <string>${b64Zonefile}</string></value>
          </data></array></param></params>` +
         '</methodCall>'
-  return fetch('https://node.blockstack.org:6263/RPC2',
-               { method: 'POST',
-                 body: postData })
-    .then(resp => {
-      if (resp.status >= 200 && resp.status <= 299){
-        return resp.text()
-      } else {
-        logger.error(`Publish zonefile error: Response code from node.blockstack: ${resp.status}`)
-        resp.text().then(
-          (text) => logger.error(`Publish zonefile error: Response from node.blockstack: ${text}`))
-        throw new Error('Failed to publish zonefile. Bad response from node.blockstack')
-      }
-    })
-    .then(respText => {
-      const start = respText.indexOf('<string>') + '<string>'.length
-      const stop = respText.indexOf('</string>')
-      const dataResp = respText.slice(start, stop)
-      let jsonResp
-      try {
-        jsonResp = JSON.parse(dataResp)
-      } catch (err) {
-        logger.error(`Failed to parse JSON response from node.blockstack: ${respText}`)
-        throw err
-      }
-      if ('error' in jsonResp) {
-        logger.error(`Error in publishing zonefile: ${JSON.stringify(jsonResp)}`)
-        throw new Error(jsonResp.error)
-      }
+  const resp = await fetch('https://node.blockstack.org:6263/RPC2',
+                           { method: 'POST',
+                             body: postData })
 
-      if (!jsonResp.saved || jsonResp.saved.length < 1) {
-        throw new Error('Invalid "saved" response from node.blockstack')
-      }
+  const respText = await resp.text()
 
-      if (jsonResp.saved[0] === 1) {
-        return true
-      } else if (jsonResp.saved[0] === 0) {
-        throw new Error('Zonefile not saved')
-      }
+  if (!(resp.status >= 200 && resp.status <= 299)) {
+    logger.error(`Publish zonefile error: Response code from node.blockstack: ${resp.status}`)
+    logger.error(`Publish zonefile error: Response from node.blockstack: ${respText}`)
+    throw new Error('Failed to publish zonefile. Bad response from node.blockstack')
+  }
 
-      throw new Error('Invalid "saved" response from node.blockstack')
-    })
+  const start = respText.indexOf('<string>') + '<string>'.length
+  const stop = respText.indexOf('</string>')
+  const dataResp = respText.slice(start, stop)
+  let jsonResp
+  try {
+    jsonResp = JSON.parse(dataResp)
+  } catch (err) {
+    logger.error(`Failed to parse JSON response from node.blockstack: ${respText}`)
+    throw err
+  }
+
+  if ('error' in jsonResp) {
+    logger.error(`Error in publishing zonefile: ${JSON.stringify(jsonResp)}`)
+    throw new Error(jsonResp.error)
+  }
+
+  if (!jsonResp.saved || jsonResp.saved.length < 1) {
+    throw new Error('Invalid "saved" response from node.blockstack')
+  }
+
+  if (jsonResp.saved[0] === 1) {
+    return true
+  } else if (jsonResp.saved[0] === 0) {
+    throw new Error('Zonefile not saved')
+  }
+
+  throw new Error('Invalid "saved" response from node.blockstack')
 }

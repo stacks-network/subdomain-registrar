@@ -97,8 +97,10 @@ export function testSubdomainServer() {
         () =>
           s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
           .then(() => t.ok(true, 'should queue bar.bar.id'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(false, 'should be able to queue bar.bar.id') }))
+          .catch((err) => {
+            console.log(err)
+            console.log(err.stack)
+            t.ok(false, 'should be able to queue bar.bar.id') }))
       .then(
         () =>
           s.queueRegistration('ba', testAddress2, 0, 'hello-world', 'foo')

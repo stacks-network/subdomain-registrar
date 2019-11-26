@@ -74,188 +74,156 @@ export class SubdomainServer {
 
   // returns a truth-y error message if request flags spam check
   //  returns false if the request is not spam
-  spamCheck(subdomainName: string, owner: string, zonefile: string,
-            ipAddress: ?string, authorization: ?string) {
+  async spamCheck(subdomainName: string, owner: string, zonefile: string,
+                  ipAddress: ?string, authorization: ?string) {
     // the logic here is a little convoluted, because I'm trying to short-circuit
     //  the spam checks while also using Promises, which is a little tricky.
     // the logic should encapsulate:
     //
     //  spam pass = (ownerAddressGood && (apiKeyGood || (ipAddressGood && socialProofsGood)))
     //
+    const ownerCount = await this.db.getOwnerAddressCount(owner)
+    if (ownerCount >= 1) {
+      return 'Owner already registered subdomain with this registrar.'
+    }
 
-    return this.db.getOwnerAddressCount(owner)
-      .then((ownerCount) => {
-        if (ownerCount >= 1) {
-          return 'Owner already registered subdomain with this registrar.'
-        }
+    if (authorization && authorization.startsWith('bearer ')) {
+      const apiKey = authorization.slice('bearer '.length)
+      if (this.apiKeys.includes(apiKey)) {
+        logger.info('Passed spam checks with API key',
+                    { msgType: 'spam_pass', reason: 'api_key' , apiKey: apiKey.slice(0,5)})
         return false
-      })
-      .then((ownerCountCheck) => {
-        if (ownerCountCheck) {
-          return Promise.resolve(ownerCountCheck)
-        }
-        if (authorization && authorization.startsWith('bearer ')) {
-          const apiKey = authorization.slice('bearer '.length)
-          if (this.apiKeys.includes(apiKey)) {
-            logger.info('Passed spam checks with API key',
-                        { msgType: 'spam_pass', reason: 'api_key' , apiKey: apiKey.slice(0,5)})
-            return Promise.resolve(false)
-          }
-        }
-        if (this.disableRegistrationsWithoutKey) {
-          return 'Registrations without API key are disabled'
-        }
-        let ipLimiterPromise
-        if (this.ipLimit <= 0) {
-          ipLimiterPromise = Promise.resolve(false)
-        } else {
-          if (!ipAddress) {
-            return 'IP limiting in effect, and no IP address detected for request.'
-          } else {
-            if (this.ipWhitelist && this.ipWhitelist.includes(ipAddress)) {
-              ipLimiterPromise = Promise.resolve(false)
-            } else {
-              ipLimiterPromise = this.db.getIPAddressCount(ipAddress)
-                .then((ipCount) => {
-                  if (ipCount >= this.ipLimit) {
-                    logger.warn('IP limited by spam filter',
-                                { msgType: 'spam_fail', reason: 'ip_count', ip: ipAddress })
-                    return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
-                  }
-                  return false
-                })
-            }
-          }
-        }
+      }
+    }
+    if (this.disableRegistrationsWithoutKey) {
+      return 'Registrations without API key are disabled'
+    }
 
-        return ipLimiterPromise
-          .then((previous) => {
-            if (previous) {
-              return previous
-            }
-            if (this.isValidLength(subdomainName)) {
-              return false
-            } else {
-              logger.warn(`Discarding operation for ${subdomainName}` +
-                          ` because subdomain shorter than ${this.nameMinLength} characters.`,
-                          { msgType: 'spam_fail', reason: 'name_length', ip: ipAddress })
-              return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
-            }
-          })
-          .then((previous) => {
-            if (previous || this.proofsRequired <= 0) {
-              return previous
-            }
-            return checkProofs(owner, zonefile)
-              .then((proofsValid) => {
-                if (proofsValid.length < this.proofsRequired) {
-                  logger.warn('Proofs required for passing spam-check',
-                              { msgType: 'spam_fail', reason: 'proofs', ip: ipAddress })
-                  return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`
-                }
-                return false
-              })
-              .catch((err) => {
-                logger.error(err)
-                return 'Proof validation failed'
-              })
-          })
-      })
+    if (this.ipLimit > 0) {
+      if (!ipAddress) {
+        return 'IP limiting in effect, and no IP address detected for request.'
+      } else {
+        // if it's not in the whitelist, perform a check
+        if (!(this.ipWhitelist && this.ipWhitelist.includes(ipAddress))) {
+          const ipCount = await this.db.getIPAddressCount(ipAddress)
+          if (ipCount >= this.ipLimit) {
+            logger.warn('IP limited by spam filter',
+                        { msgType: 'spam_fail', reason: 'ip_count', ip: ipAddress })
+            return `IP address ${JSON.stringify(ipAddress)} already registered ${ipCount} subdomains.`
+          }
+        }
+      }
+    }
+
+    if (! this.isValidLength(subdomainName)) {
+      logger.warn(`Discarding operation for ${subdomainName}` +
+                  ` because subdomain shorter than ${this.nameMinLength} characters.`,
+                  { msgType: 'spam_fail', reason: 'name_length', ip: ipAddress })
+      return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
+    }
+
+    if (this.proofsRequired > 0) {
+      try {
+        const proofsValid = await checkProofs(owner, zonefile)
+        if (proofsValid.length < this.proofsRequired) {
+          logger.warn('Proofs required for passing spam-check',
+                      { msgType: 'spam_fail', reason: 'proofs', ip: ipAddress })
+          return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`
+        }
+      } catch (err) {
+        logger.error(err)
+        return 'Proof validation failed'
+      }
+    }
+
+    return false
   }
 
-  queueRegistration(subdomainName: string, owner: string,
+  async queueRegistration(subdomainName: string, owner: string,
                     sequenceNumber: number, zonefile: string,
-                    ipAddress: string = '', authorization: ?string = '') {
-    return this.isSubdomainInQueue(subdomainName)
-      .then((inQueue) => {
-        if (inQueue) {
-          logger.warn(`Name queued already: ${subdomainName}`,
-                      { msgType: 'repeat_name', name: subdomainName, ip: ipAddress })
-          throw new Error('Subdomain operation already queued for this name.')
+                    ipAddress: string = '', authorization: ?string = '') : Promise<void> {
+    const inQueue = await this.isSubdomainInQueue(subdomainName)
+    if (inQueue) {
+      logger.warn(`Name queued already: ${subdomainName}`,
+                  { msgType: 'repeat_name', name: subdomainName, ip: ipAddress })
+      throw new Error('Subdomain operation already queued for this name.')
+    }
+
+    const isValid = await isRegistrationValid(
+      subdomainName, this.domainName, owner, sequenceNumber, zonefile)
+
+    if (!isValid) {
+      logger.warn(`Discarding operation for ${subdomainName} because it failed validation.`)
+      throw new Error('Requested subdomain operation is invalid.')
+    }
+
+    const isSpam = await this.spamCheck(
+      subdomainName, owner, zonefile, ipAddress, authorization)
+
+    if (isSpam) {
+      throw new Error(isSpam)
+    }
+
+    try {
+      await this.lock.acquire(QUEUE_LOCK, async () => {
+        try {
+          await this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
+          try {
+            await this.db.logRequestorData(subdomainName, owner, ipAddress)
+          } catch (err) {
+            logger.error(`Setting status for ${subdomainName} as errored.`)
+            await this.db.updateStatusFor([subdomainName], 'Error logging ip info', '')
+            throw err
+          }
+          logger.info('Queued registration request.',
+                      { msgType: 'queued', name: subdomainName, owner, ip: ipAddress })
+        } catch (err) {
+          logger.error(`Error processing registration: ${err}`)
+          logger.error(err.stack)
+          throw err
         }
-        return isRegistrationValid(
-          subdomainName, this.domainName, owner, sequenceNumber, zonefile)
-      })
-      .then((valid) => {
-        if (!valid) {
-          logger.warn(`Discarding operation for ${subdomainName}` +
-                           ' because it failed validation.')
-          throw new Error('Requested subdomain operation is invalid.')
-        }
-        return this.spamCheck(
-          subdomainName, owner, zonefile, ipAddress, authorization)
-      })
-      .then((spamFailure) => {
-        if (spamFailure) {
-          throw new Error(spamFailure)
-        }
-      })
-      .then(() => {
-        return this.lock.acquire(QUEUE_LOCK, () => {
-          return this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
-            .then(() => {
-              return this.db.logRequestorData(subdomainName, owner, ipAddress)
-            })
-            .catch((err) => {
-              logger.error(`Setting status for ${subdomainName} as errored.`)
-              this.db.updateStatusFor([subdomainName], 'Error logging ip info', '')
-              throw err
-            })
-            .then(() => {
-              logger.info('Queued registration request.',
-                          { msgType: 'queued', name: subdomainName, owner, ip: ipAddress })
-            })
-            .catch((err) => {
-              logger.error(`Error processing registration: ${err}`)
-              logger.error(err.stack)
-              throw err
-            })
-        }, { timeout: 5000 })
-          .catch((err) => {
-            if (err && err.message && err.message == 'async-lock timed out') {
-              logger.error('Failure acquiring registration lock',
-                           { msgType: 'lock_acquire_fail' })
-              throw new Error('Failed to obtain lock')
-            } else {
-              throw err
-            }
-          })
-      })
+      }, { timeout: 5000 })
+    } catch(err) {
+      if (err && err.message && err.message == 'async-lock timed out') {
+        logger.error('Failure acquiring registration lock',
+                     { msgType: 'lock_acquire_fail' })
+        throw new Error('Failed to obtain lock')
+      } else {
+        throw err
+      }
+    }
   }
 
-  getSubdomainStatus(subdomainName: string):
-  Promise<{status: string, statusCode?: Number}> {
-    return isSubdomainRegistered(`${subdomainName}.${this.domainName}`)
-      .then((isRegistered) => {
-        if (isRegistered) {
-          return { status: 'Subdomain propagated' }
-        } else {
-          return this.db.getStatusRecord(subdomainName).then((rows) => {
-            if (rows.length > 0) {
-              const statusRecord = rows[0]
-              if (statusRecord.status == 'received') {
-                return { status:
+  async getSubdomainStatus(subdomainName: string):
+  Promise<{status: string, statusCode?: number}> {
+    if (await isSubdomainRegistered(`${subdomainName}.${this.domainName}`)) {
+      return { status: 'Subdomain propagated' }
+    } else {
+      const rows = await this.db.getStatusRecord(subdomainName)
+
+      if (rows.length > 0) {
+        const statusRecord = rows[0]
+        if (statusRecord.status == 'received') {
+          return { status:
                    'Subdomain is queued for update and should be' +
-                         ' announced within the next few blocks.' }
-              } else if (statusRecord.status == 'submitted') {
-                return { status:
-                         `Your subdomain was registered in transaction ${statusRecord.status_more}` +
-                         ' -- it should propagate on the network once it has 6 confirmations.' }
-              } else {
-                return { status: statusRecord.status }
-              }
-            } else {
-              return { status: 'Subdomain not registered with this registrar',
-                       statusCode: 404 }
-            }
-          })
+                   ' announced within the next few blocks.' }
+        } else if (statusRecord.status == 'submitted') {
+          return { status:
+                   `Your subdomain was registered in transaction ${statusRecord.status_more}` +
+                   ' -- it should propagate on the network once it has 6 confirmations.' }
+        } else {
+          return { status: statusRecord.status }
         }
-      })
+      } else {
+        return { status: 'Subdomain not registered with this registrar',
+                 statusCode: 404 }
+      }
+    }
   }
 
-  isSubdomainInQueue(subdomainName: string) {
-    return this.getSubdomainStatus(subdomainName)
-      .then(status => (status.statusCode !== 404))
+  async isSubdomainInQueue(subdomainName: string): Promise<boolean> {
+    const status = await this.getSubdomainStatus(subdomainName)
+    return (status.statusCode !== 404)
   }
 
   backupZonefile(zonefile: string) {
