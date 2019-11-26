@@ -19,10 +19,10 @@ const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
 
 // reconfigure obtaining consensus hash
 
-const getConsensusHashInner = bskConfig.getConsensusHash
+const getConsensusHashInner = bskConfig.network.getConsensusHash
 
-bskConfig.getConsensusHash = () => {
-  getConsensusHashInner()
+bskConfig.network.getConsensusHash = function() {
+  return getConsensusHashInner.apply(bskConfig.network, [])
     .then(x => {
       logger.info(`Obtained consensus hash ${x}`,
                   { msgType: 'consensus_hash', consensusHash: x })
