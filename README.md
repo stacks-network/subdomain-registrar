@@ -60,6 +60,18 @@ In order to support registration requests from "trusted sources", you can use th
 to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
 skip the spam countermeasures.
 
+### Whitelisting IP Addresses
+
+If you add a key to your `config.json` file, you can whitelist IPs against your spam counter measures, e.g.:
+
+```
+{
+  ...
+  "ipWhitelist": ["127.0.0.1"],
+  ...
+}
+```
+
 ### Private Key Storage
 
 You can either store your private key hexes in your config.json, or pass them
@@ -101,6 +113,16 @@ To support this, the subdomain registrar is capable of responding to `/v1/names/
 and can be configured to set the `_resolver` URI entry in each zonefile that it publishes. To enable this
 behavior, set the `resolverUri` setting in your `config.json` file to a public-facing URL for your registrar.
 We recommend placing this GET `/v1/names/` endpoint behind a caching layer of some kind.
+
+### Monitoring via Prometheus
+
+You can configure a monitoring service for the subdomain registrar via adding a `prometheus` field to the configuration file:
+
+```
+"prometheus": { "start": true, "port": 5941 }
+```
+
+Or by setting the environment variable `BSK_SUBDOMAIN_PROMETHEUS_PORT`
 
 # Sample Curl Scripts
 

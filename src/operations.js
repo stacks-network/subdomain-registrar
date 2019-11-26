@@ -17,6 +17,19 @@ export type SubdomainOp = {
 
 const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
 
+// reconfigure obtaining consensus hash
+
+const getConsensusHashInner = bskConfig.network.getConsensusHash
+
+bskConfig.network.getConsensusHash = function() {
+  return getConsensusHashInner.apply(bskConfig.network, [])
+    .then(x => {
+      logger.info(`Obtained consensus hash ${x}`,
+                  { msgType: 'consensus_hash', consensusHash: x })
+      return x
+    })
+}
+
 export function destructZonefile(zonefile: string) {
   const encodedZonefile = Buffer.from(zonefile)
         .toString('base64')
@@ -107,9 +120,10 @@ Promise<Array<{txHash: string, status: boolean}>> {
         tx => bskConfig.network.getTransactionInfo(tx.txHash)
           .then(txInfo => {
             if (! txInfo.block_height) {
-              logger.info(`Failed to get block_height for ${tx.txHash} --- probably still unconfirmed.`)
+              logger.info('Could not get block_height, probably unconfirmed.',
+                          { msgType: 'unconfirmed', txid: tx.txHash })
               return Promise.resolve({ txHash: tx.txHash, status: false })
-            } else if (txInfo.block_height + 6 > blockHeight) {
+            } else if (txInfo.block_height + 7 > blockHeight) {
               logger.debug(`block_height for ${tx.txHash}: ${txInfo.block_height} --- has ${1 + blockHeight - txInfo.block_height} confirmations`)
               return Promise.resolve({ txHash: tx.txHash, status: false })
             } else {
