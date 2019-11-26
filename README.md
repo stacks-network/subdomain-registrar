@@ -114,6 +114,16 @@ and can be configured to set the `_resolver` URI entry in each zonefile that it 
 behavior, set the `resolverUri` setting in your `config.json` file to a public-facing URL for your registrar.
 We recommend placing this GET `/v1/names/` endpoint behind a caching layer of some kind.
 
+### Monitoring via Prometheus
+
+You can configure a monitoring service for the subdomain registrar via adding a `prometheus` field to the configuration file:
+
+```
+"prometheus": { "start": true, "port": 5941 }
+```
+
+Or by setting the environment variable `BSK_SUBDOMAIN_PROMETHEUS_PORT`
+
 # Sample Curl Scripts
 
 

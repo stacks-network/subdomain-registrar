@@ -27,7 +27,8 @@ const configDevelopDefaults = {
   ipLimit: 0,
   apiKeys: [],
   proofsRequired: 0,
-  disableRegistrationsWithoutKey: false
+  disableRegistrationsWithoutKey: false,
+  prometheus: { start: false, port: 0 }
 }
 
 const configDefaults = {
@@ -56,7 +57,8 @@ const configDefaults = {
   apiKeys: [],
   proofsRequired: 0,
   disableRegistrationsWithoutKey: false,
-  nameMinLength: 1
+  nameMinLength: 1,
+  prometheus: { start: false, port: 0 }
 }
 
 
@@ -78,6 +80,10 @@ export function getConfig() {
   }
   if (process.env.BSK_SUBDOMAIN_OWNER_KEY) {
     config.ownerKey = process.env.BSK_SUBDOMAIN_OWNER_KEY
+  }
+
+  if (process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) {
+    config.prometheus = { start: true, port: parseInt(process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) }
   }
 
   config.winstonConfig = { transports: [
