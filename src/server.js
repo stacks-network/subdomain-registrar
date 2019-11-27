@@ -238,183 +238,164 @@ export class SubdomainServer {
     return this.db.updateStatusFor(namesSubmitted, 'submitted', txHash)
   }
 
-  markTransactionsComplete(entries: Array<{txHash: string}>) {
+  async markTransactionsComplete(entries: Array<{ txHash: string, status: boolean }>): Promise<void> {
     if (entries.length > 0) {
       logger.info(`${entries.length} transactions newly finished.`,
                   { msgType: 'tx_finish', count: entries.length })
     } else {
       logger.debug(`${entries.length} transactions newly finished.`)
-      return Promise.resolve()
+      return
     }
 
-    return this.db.flushTrackedTransactions(entries)
+    return await this.db.flushTrackedTransactions(entries)
   }
 
   fetchQueue() {
     return this.db.fetchQueue()
   }
 
-  submitBatch() : Promise<string> {
-    return this.lock.acquire(QUEUE_LOCK, () => {
-      logger.debug('Obtained lock, fetching queue.')
-      return this.fetchQueue()
-        .then(queue => {
-          return Promise.all(
+  async submitBatch() : Promise<string> {
+    try {
+      return await this.lock.acquire(QUEUE_LOCK, async () => {
+        try {
+          logger.debug('Obtained lock, fetching queue.')
+          const queue = await this.fetchQueue()
+          const results = await Promise.all(
             queue.map(subdomainOp => isRegistrationValid(
               subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
               parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile)))
-            .then(results => {
-              const valid = queue.filter((op, opIndex) => results[opIndex])
-              const invalid = queue.filter((op, opIndex) => !results[opIndex])
-              invalid.forEach(
-                op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
-                                  'because it is not valid.',
-                                  { msgType: 'skip_batch_inclusion', name: op.subdomainName }))
-              return valid
-            })
-        })
-        .then(queue => {
-          if (queue.length === 0) {
-            logger.debug(`${queue.length} items in the queue.`)
+          const valid = queue.filter((op, opIndex) => results[opIndex])
+          const invalid = queue.filter((op, opIndex) => !results[opIndex])
+          invalid.forEach(
+            op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
+                              'because it is not valid.',
+                              { msgType: 'skip_batch_inclusion', name: op.subdomainName }))
+
+          if (valid.length === 0) {
+            logger.debug(`${valid.length} items in the queue.`)
             return null
           }
-          logger.info(`Constructing batch with ${queue.length} currently queued.`,
-                      { msgType: 'begin_batch', currentQueue: queue.length })
-          const update = makeUpdateZonefile(this.domainName, this.uriEntries,
-                                            queue, this.zonefileSize)
+          logger.info(`Constructing batch with ${valid.length} currently queued.`,
+                      { msgType: 'begin_batch', currentQueue: valid.length })
+          const update = makeUpdateZonefile(this.domainName, this.uriEntries, valid, this.zonefileSize)
           const zonefile = update.zonefile
           const updatedFromQueue = update.submitted
           logger.debug(`[${JSON.stringify(updatedFromQueue)}] will be in this batch.`)
           logger.info(`Batch will contain ${updatedFromQueue.length} entries.`,
-                      { msgType: 'built_batch', currentQueue: queue.length, batchSize: updatedFromQueue.length })
+                      { msgType: 'built_batch', currentQueue: valid.length, batchSize: updatedFromQueue.length })
 
-          return this.backupZonefile(zonefile)
-            .then(() => submitUpdate(this.domainName, zonefile,
-                                     this.ownerKey, this.paymentKey))
-            .then((txHash) => {
-              return this.updateQueueStatus(updatedFromQueue, txHash)
-            })
-            .then((txHash) => this.addTransactionToTrack(txHash, zonefile))
-        })
-        .then(txHash => {
-          if (txHash) {
-            logger.info('Batch submitted', { msgType: 'batch_submitted', txid: txHash })
-          } else {
-            logger.debug('No batch submitted')
-          }
+          await this.backupZonefile(zonefile)
+          const txHash = await submitUpdate(this.domainName, zonefile, this.ownerKey, this.paymentKey)
+          await this.updateQueueStatus(updatedFromQueue, txHash)
+          await this.addTransactionToTrack(txHash, zonefile)
+          logger.info('Batch submitted', { msgType: 'batch_submitted', txid: txHash })
           return txHash
-        })
-        .catch((err) => {
+        } catch (err) {
           logger.error(`Failed to submit batch: ${err}`)
           logger.error(err.stack)
           throw err
-        })
-    }, { timeout: 5000 })
-      .catch((err) => {
-        if (err && err.message && err.message == 'async-lock timed out') {
-          throw new Error('Failed to obtain lock')
-        } else {
-          throw err
         }
-      })
+      }, { timeout: 5000 })
+    } catch (err) {
+      if (err && err.message && err.message == 'async-lock timed out') {
+        throw new Error('Failed to obtain lock')
+      } else {
+        throw err
+      }
+    }
   }
 
-  getSubdomainInfo(fullyQualifiedName: string) {
+  async getSubdomainInfo(fullyQualifiedName: string) {
     if (!fullyQualifiedName.endsWith(`.${this.domainName}`)) {
-      return Promise.resolve({
-        message: { error: 'Wrong domain' },
-        statusCode: 400 })
+      return { message: { error: 'Wrong domain' },
+               statusCode: 400 }
     }
     const namePieces = fullyQualifiedName.split('.')
     if (namePieces.length !== 3) {
-      return Promise.resolve({
-        message: { error: 'Bad name' },
-        statusCode: 400 })
+      return { message: { error: 'Bad name' },
+               statusCode: 400 }
     }
     const subdomainName = namePieces[0]
-    return this.db.getStatusRecord(subdomainName)
-      .then((rows) => {
-        if (rows.length > 0) {
-          const statusRecord = rows[0]
-          const nameRecord = { blockchain: 'bitcoin',
-                               status: 'unknown',
-                               last_txid: '', // eslint-disable-line camelcase
-                               zonefile: statusRecord.zonefile,
-                               address: statusRecord.owner,
-                               zonefile_hash: '' } // eslint-disable-line camelcase
-          if (statusRecord.status === 'received') {
-            nameRecord.status = 'pending_subdomain'
-            nameRecord.last_txid = '' // eslint-disable-line camelcase
-          } else if (statusRecord.status === 'submitted') {
-            nameRecord.status = 'submitted_subdomain'
-            nameRecord.last_txid = statusRecord.status_more // eslint-disable-line camelcase
-          }
-          nameRecord.zonefile_hash = hash160( // eslint-disable-line camelcase
-            Buffer.from(nameRecord.zonefile)).toString('hex')
-          return { message: nameRecord,
-                   statusCode: 200 }
-        } else if (!this.isValidLength(subdomainName)) {
-          return { message: { status: 'invalid_name' },
-                   statusCode: 400 }
-        } else {
-          return { message: { status: 'available' },
-                   statusCode: 404 }
-        }
-      })
+    const rows = await this.db.getStatusRecord(subdomainName)
+
+    if (rows.length > 0) {
+      const statusRecord = rows[0]
+      const nameRecord = { blockchain: 'bitcoin',
+                           status: 'unknown',
+                           last_txid: '', // eslint-disable-line camelcase
+                           zonefile: statusRecord.zonefile,
+                           address: statusRecord.owner,
+                           zonefile_hash: '' } // eslint-disable-line camelcase
+      if (statusRecord.status === 'received') {
+        nameRecord.status = 'pending_subdomain'
+        nameRecord.last_txid = '' // eslint-disable-line camelcase
+      } else if (statusRecord.status === 'submitted') {
+        nameRecord.status = 'submitted_subdomain'
+        nameRecord.last_txid = statusRecord.status_more // eslint-disable-line camelcase
+      }
+      nameRecord.zonefile_hash = hash160( // eslint-disable-line camelcase
+        Buffer.from(nameRecord.zonefile)).toString('hex')
+      return { message: nameRecord,
+               statusCode: 200 }
+    } else if (!this.isValidLength(subdomainName)) {
+      return { message: { status: 'invalid_name' },
+               statusCode: 400 }
+    } else {
+      return { message: { status: 'available' },
+               statusCode: 404 }
+    }
   }
 
-  checkZonefiles() {
+  async checkZonefiles() {
     logger.debug('Checking for outstanding transactions.')
-    return this.lock.acquire(QUEUE_LOCK, () => {
-      logger.debug('Obtained lock, checking transactions.')
+    try {
+      return await this.lock.acquire(QUEUE_LOCK, async () => {
+        logger.debug('Obtained lock, checking transactions.')
 
-      return this.db.getTrackedTransactions()
-        .then(entries => {
+        try {
+          const entries = await this.db.getTrackedTransactions()
           if (entries.length > 0) {
             logger.info(`${entries.length} outstanding transactions.`,
                         { msgType: 'outstanding_tx', count: entries.length })
           } else {
             logger.debug(`${entries.length} outstanding transactions.`)
           }
-          return checkTransactions(entries)
-        })
-        .then(txStatuses => {
-          this.markTransactionsComplete(
-            txStatuses.filter(x => x.status))
+          const statuses = await checkTransactions(entries)
+          const completed = statuses.filter(x => x.status)
+          await this.markTransactionsComplete(completed)
           logger.debug('Lock released')
-        })
-        .catch((err) => {
+        } catch (err) {
           logger.error(`Failure trying to publish zonefiles: ${err}`)
           logger.error(err.stack)
           throw new Error(`Failed to check transaction status: ${err}`)
-        })
-    }, { timeout: 1 })
-      .catch((err) => {
-        if (err && err.message && err.message == 'async-lock timed out') {
-          throw new Error('Failed to obtain lock')
-        } else {
-          throw err
         }
-      })
+      }, { timeout: 1 })
+    } catch(err) {
+      if (err && err.message && err.message == 'async-lock timed out') {
+        throw new Error('Failed to obtain lock')
+      } else {
+        throw err
+      }
+    }
   }
 
-  listSubdomainRecords(page: number) {
+  async listSubdomainRecords(page: number) {
     logger.debug(`Listing subdomain page ${page}`)
     const timeLimit = (new Date().getTime() / 1000) - TIME_WEEK
 
-    return this.db.listSubdomains(page, timeLimit)
-      .then((rows) => rows.map((row) => {
-        const formattedRow = {
-          name: `${row.subdomainName}.${this.domainName}`,
-          address: row.owner,
-          sequence: row.sequenceNumber,
-          zonefile: row.zonefile,
-          status: row.status,
-          iterator: row.queue_ix
-        }
-        return formattedRow
-      }))
-      .then((rows) => ({ message: rows, statusCode: 200 }))
+    const rows = (await this.db.listSubdomains(page, timeLimit))
+          .map((row) => {
+            const formattedRow = {
+              name: `${row.subdomainName}.${this.domainName}`,
+              address: row.owner,
+              sequence: row.sequenceNumber,
+              zonefile: row.zonefile,
+              status: row.status,
+              iterator: row.queue_ix
+            }
+            return formattedRow
+          })
+    return { message: rows, statusCode: 200 }
   }
 
   shutdown() {
