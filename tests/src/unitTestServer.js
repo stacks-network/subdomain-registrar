@@ -76,6 +76,7 @@ export function testSubdomainServer() {
                                   ipLimit: 1,
                                   ipWhitelist: ['whitelisted-ip-addr'],
                                   proofsRequired: 0,
+                                  checkCoreOnBatching: true,
                                   apiKeys: ['abcdefghijk'],
                                   zonefileSize: 4096,
                                   nameMinLength: 3})
@@ -233,6 +234,7 @@ export function testSubdomainServer() {
                                   ipLimit: 1,
                                   proofsRequired: 0,
                                   disableRegistrationsWithoutKey: true,
+                                  checkCoreOnBatching: true,
                                   apiKeys: ['abcdefghijk'],
                                   zonefileSize: 4096 })
     s.initializeServer()
@@ -305,6 +307,7 @@ export function testSubdomainServer() {
                                   paymentKey: testSK2,
                                   dbLocation: ':memory:',
                                   ipLimit: 0,
+                                  checkCoreOnBatching: true,
                                   proofsRequired: 0,
                                   zonefileSize: 4096,
                                   domainUri: 'http://myfreewebsite.com' })
@@ -357,7 +360,7 @@ export function testSubdomainServer() {
       .then(() => s.getSubdomainStatus('foo')
             .then((x) =>
                   t.ok(x.status.startsWith('Subdomain is queued'),
-                       `foo.bar.id should still be queued for update`)))
+                       `foo.bar.id should still be queued for update, was: ${x.status}`)))
   })
 
   test('shutdown', (t) => {
@@ -368,6 +371,7 @@ export function testSubdomainServer() {
                                   paymentKey: testSK2,
                                   dbLocation: ':memory:',
                                   zonefileSize: 4096,
+                                  checkCoreOnBatching: true,
                                   ipLimit: 0,
                                   proofsRequired: 0,
                                   domainUri: 'http://myfreewebsite.com' })
@@ -435,6 +439,7 @@ export function testSubdomainServer() {
                                   paymentKey: testSK2,
                                   dbLocation: ':memory:',
                                   zonefileSize: 4096,
+                                  checkCoreOnBatching: true,
                                   ipLimit: 0,
                                   proofsRequired: 0,
                                   domainUri: 'http://myfreewebsite.com' })
