@@ -153,7 +153,7 @@ export class SubdomainServer {
     }
 
     const isValid = await isRegistrationValid(
-      subdomainName, this.domainName, owner, sequenceNumber, zonefile, true)
+      subdomainName, this.domainName, owner, sequenceNumber, true)
 
     if (!isValid) {
       logger.warn(`Discarding operation for ${subdomainName} because it failed validation.`)
@@ -266,7 +266,7 @@ export class SubdomainServer {
           const results = await Promise.all(
             queue.map(subdomainOp => isRegistrationValid(
               subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
-              parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile, this.checkCoreOnBatching)))
+              parseInt(subdomainOp.sequenceNumber), this.checkCoreOnBatching)))
           const valid = queue.filter((op, opIndex) => results[opIndex])
           const invalid = queue.filter((op, opIndex) => !results[opIndex])
           invalid.forEach(
