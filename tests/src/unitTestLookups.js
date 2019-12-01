@@ -61,7 +61,7 @@ export function unitTestLookups() {
   })
 
   test('isRegistrationValid', (t) => {
-    t.plan(6)
+    t.plan(7)
 
     nock.cleanAll()
     nock('https://core.blockstack.org')
@@ -76,17 +76,19 @@ export function unitTestLookups() {
       .get('/v1/names/car.bar.id')
       .reply(500, {})
 
-    isRegistrationValid('foo', 'bar.id', testAddress, 1)
+    isRegistrationValid('foo', 'bar.id', testAddress, 1, true)
       .then(x => t.ok(!x, 'Sequence number must be 0'))
-    isRegistrationValid('foo', 'bar.id', 'm12345', 0)
+    isRegistrationValid('foo', 'bar.id', 'm12345', 0, true)
       .then(x => t.ok(!x, 'Owner must be a mainnet address'))
-    isRegistrationValid('AbcDef', 'bar.id', testAddress, 0)
+    isRegistrationValid('AbcDef', 'bar.id', testAddress, 0, true)
       .then(x => t.ok(!x, 'must be a legal subdomain name'))
-    isRegistrationValid('foo', 'bar.id', testAddress, 0)
+    isRegistrationValid('foo', 'bar.id', testAddress, 0, true)
       .then(x => t.ok(!x, 'must not already exist'))
-    isRegistrationValid('car', 'bar.id', testAddress, 0)
+    isRegistrationValid('foo', 'bar.id', testAddress, 0, false)
+      .then(x => t.ok(x, 'dont check if passed false'))
+    isRegistrationValid('car', 'bar.id', testAddress, 0, true)
       .then(x => t.ok(x, 'must not raise error in subdomain existence check'))
-    isRegistrationValid('bar', 'bar.id', testAddress, 0)
+    isRegistrationValid('bar', 'bar.id', testAddress, 0, true)
       .then(x => t.ok(x, 'everything is cool'))
   })
 
