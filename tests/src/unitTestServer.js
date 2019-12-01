@@ -97,8 +97,10 @@ export function testSubdomainServer() {
         () =>
           s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
           .then(() => t.ok(true, 'should queue bar.bar.id'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(false, 'should be able to queue bar.bar.id') }))
+          .catch((err) => {
+            console.log(err)
+            console.log(err.stack)
+            t.ok(false, 'should be able to queue bar.bar.id') }))
       .then(
         () =>
           s.queueRegistration('ba', testAddress2, 0, 'hello-world', 'foo')
@@ -358,8 +360,26 @@ export function testSubdomainServer() {
                        `foo.bar.id should still be queued for update`)))
   })
 
+  test('shutdown', (t) => {
+    t.plan(1)
+
+    let s = new SubdomainServer({ domainName: 'bar.id',
+                                  ownerKey: testSK,
+                                  paymentKey: testSK2,
+                                  dbLocation: ':memory:',
+                                  zonefileSize: 4096,
+                                  ipLimit: 0,
+                                  proofsRequired: 0,
+                                  domainUri: 'http://myfreewebsite.com' })
+    return s.initializeServer()
+      .then(() => s.shutdown())
+      .then(() => t.ok(true, 'should shut down'))
+      .catch((e) => { console.log(e)
+                      t.ok(false, 'failed to shut down') })
+  })
+
   test('submitBatch not owned', (t) => {
-    t.plan(7)
+    t.plan(8)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -449,7 +469,13 @@ export function testSubdomainServer() {
                 t.equal(err.message, 'Failed to obtain lock')
               })
 
-        return Promise.all([acquiredWait, failureBatch])
+        const failureCheck = s.checkZonefiles()
+              .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+              .catch((err) => {
+                t.equal(err.message, 'Failed to obtain lock')
+              })
+
+        return Promise.all([acquiredWait, failureBatch, failureCheck])
       })
       .then(() => s.submitBatch())
       .then(() => t.ok(false, 'Should not have submitted a batch'))

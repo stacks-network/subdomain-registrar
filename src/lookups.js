@@ -30,7 +30,7 @@ export function checkProofs(owner, zonefile) {
 
 export function isRegistrationValid(
   subdomainName: String, domainName: String,
-  owner: String, sequenceNumber: Number) {
+  owner: String, sequenceNumber: Number, checkCore: boolean) {
   // currently, only support *new* subdomains
   if (sequenceNumber !== 0) {
     logger.debug(`seqn: ${sequenceNumber} failed validation`)
@@ -47,6 +47,9 @@ export function isRegistrationValid(
   if (!subdomainRegex.test(subdomainName)) {
     logger.debug(`subdomainName: ${subdomainName} failed validation`)
     return Promise.resolve(false)
+  }
+  if (!checkCore) {
+    return Promise.resolve(true)
   }
 
   // shouldn't already exist
