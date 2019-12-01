@@ -23,6 +23,7 @@ export class SubdomainServer {
   proofsRequired: number
   db: RegistrarQueueDB
   lock: AsyncLock
+  checkCoreOnBatching: boolean
 
   constructor(config: {domainName: string, ownerKey: string,
                        paymentKey: string, dbLocation: string,
@@ -30,6 +31,7 @@ export class SubdomainServer {
                        zonefileSize: number,
                        ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
+                       checkCoreOnBatching: boolean,
                        apiKeys?: Array<string>,
                        ipWhitelist?: Array<string>,
                        nameMinLength: number}) {
@@ -56,6 +58,7 @@ export class SubdomainServer {
     this.ipLimit = config.ipLimit
     this.nameMinLength = config.nameMinLength
     this.proofsRequired = config.proofsRequired
+    this.checkCoreOnBatching = config.checkCoreOnBatching
     this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new AsyncLock()
   }
@@ -150,7 +153,7 @@ export class SubdomainServer {
     }
 
     const isValid = await isRegistrationValid(
-      subdomainName, this.domainName, owner, sequenceNumber, zonefile)
+      subdomainName, this.domainName, owner, sequenceNumber, zonefile, true)
 
     if (!isValid) {
       logger.warn(`Discarding operation for ${subdomainName} because it failed validation.`)
@@ -263,7 +266,7 @@ export class SubdomainServer {
           const results = await Promise.all(
             queue.map(subdomainOp => isRegistrationValid(
               subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
-              parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile)))
+              parseInt(subdomainOp.sequenceNumber), subdomainOp.zonefile, this.checkCoreOnBatching)))
           const valid = queue.filter((op, opIndex) => results[opIndex])
           const invalid = queue.filter((op, opIndex) => !results[opIndex])
           invalid.forEach(

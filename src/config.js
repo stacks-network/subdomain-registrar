@@ -28,6 +28,7 @@ const configDevelopDefaults = {
   apiKeys: [],
   proofsRequired: 0,
   disableRegistrationsWithoutKey: false,
+  checkCoreOnBatching: true,
   prometheus: { start: false, port: 0 }
 }
 
@@ -57,6 +58,7 @@ const configDefaults = {
   apiKeys: [],
   proofsRequired: 0,
   disableRegistrationsWithoutKey: false,
+  checkCoreOnBatching: true,
   nameMinLength: 1,
   prometheus: { start: false, port: 0 }
 }
