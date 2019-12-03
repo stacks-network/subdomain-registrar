@@ -276,14 +276,14 @@ export class RegistrarQueueDB {
 
   getTrackedTransactions() {
     return dbAll(this.db,
-                 'SELECT t.txHash, t.zonefile, IFNULL(ti.blockHeight, 0) FROM transactions_tracked as t ' +
+                 'SELECT t.txHash, t.zonefile, IFNULL(ti.blockHeight, 0) as blockHeight FROM transactions_tracked as t ' +
                  'LEFT JOIN transactions_info as ti ON t.txHash = ti.txHash')
   }
 
   async updateTransactionHeights(transactions: Array<{ txHash: string, blockHeight: number, status: boolean }>) : Promise<void> {
     const cmd = 'REPLACE INTO transactions_info(txHash, blockHeight) VALUES (?, ?)'
     await Promise.all(transactions.map(
-      entry => dbRun(this.db, cmd, [entry.blockHeight, entry.txHash])))
+      entry => dbRun(this.db, cmd, [entry.txHash, entry.blockHeight])))
   }
 
   async flushTrackedTransactions(transactions: Array<{txHash: string, blockHeight: number, status: boolean}>) : Promise<void> {

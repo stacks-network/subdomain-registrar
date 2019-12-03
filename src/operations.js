@@ -136,8 +136,6 @@ Promise<Array<{txHash: string, status: boolean, blockHeight: number}>> {
 
   const blockHeight = SERVER_GLOBALS.lastSeenBlockHeight
 
-
-
   return await Promise.all(
     txs.map(async (tx) => {
       if (!tx.blockHeight || tx.blockHeight <= 0) {

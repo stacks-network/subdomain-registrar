@@ -262,7 +262,7 @@ export function testSubdomainServer() {
     })
 
   test('submitBatch', async (t) => {
-    t.plan(8)
+    t.plan(10)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -296,8 +296,8 @@ export function testSubdomainServer() {
                        tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
 
     nock('https://blockchain.info')
-      .persist()
       .get('/latestblock?cors=true')
+      .times(2)
       .reply(200, { height: 300 })
 
     nock('https://blockchain.info')
@@ -384,8 +384,9 @@ export function testSubdomainServer() {
                     "testnet": false,
                     "zonefile_count": 106499 })
 
-    await s.submitBatch()
-    t.pass('Should have submitted a batch')
+    let b = await s.submitBatch()
+    const expected_tx = 'ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f'
+    t.equal(b, expected_tx)
 
     nock('https://core.blockstack.org')
       .persist()
@@ -398,6 +399,34 @@ export function testSubdomainServer() {
     x = await s.getSubdomainStatus('foo')
     t.ok(x.status.startsWith('Subdomain is queued'),
          `foo.bar.id should still be queued for update, was: ${x.status}`)
+
+    nock('https://blockchain.info')
+      .get(`/rawtx/${expected_tx}?cors=true`)
+      .times(1)
+      .reply(200, { block_height: 300 })
+
+    await s.checkZonefiles()
+
+    t.equal((await s.db.getTrackedTransactions()).length, 1, 'Should still be tracking 1 transaction')
+
+    nock('https://blockchain.info')
+      .get('/latestblock?cors=true')
+      .times(1)
+      .reply(200, { height: 310 })
+
+    nock('https://node.blockstack.org:6263')
+      .persist()
+      .post('/RPC2')
+      .reply(200, '<string>{"saved": [1]}</string>')
+
+    nock('https://core.blockstack.org')
+      .persist()
+      .post('/v1/zonefile/')
+      .reply(202, { servers: ['me.co'] })
+
+    await s.checkZonefiles()
+
+    t.equal((await s.db.getTrackedTransactions()).length, 0, 'Should have finished 1 transaction')
   })
 
   test('shutdown', async (t) => {
