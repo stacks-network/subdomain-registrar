@@ -40,7 +40,8 @@
     "lint": "eslint src",
     "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",
     "test-inner": "npm run compile-tests && node tests/lib/index.js",
-    "test": "nyc --reporter=text npm run test-inner"
+    "test": "nyc --reporter=text npm run test-inner",
+    "report-lcov": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "nyc": {
     "include": [

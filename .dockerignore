@@ -3,3 +3,5 @@ node_modules
 lib
 Dockerfile
 data
+coverage.lcov
+.nyc_output
