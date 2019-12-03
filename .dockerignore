@@ -2,5 +2,4 @@
 node_modules
 lib
 Dockerfile
-package-lock.json
 data

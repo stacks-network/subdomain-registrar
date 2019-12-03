@@ -30,6 +30,11 @@ export function testSubdomainServer() {
     t.plan(26)
     nock.cleanAll()
 
+    nock('https://blockchain.info')
+      .persist()
+      .get('/latestblock?cors=true')
+      .reply(200, { height: 300 })
+
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/foo.bar.id')
@@ -226,6 +231,11 @@ export function testSubdomainServer() {
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
+    nock('https://blockchain.info')
+      .persist()
+      .get('/latestblock?cors=true')
+      .reply(200, { height: 300 })
+
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
                                   paymentKey: testSK,
@@ -251,7 +261,7 @@ export function testSubdomainServer() {
     })
 
   test('submitBatch', (t) => {
-    t.plan(7)
+    t.plan(8)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -261,7 +271,7 @@ export function testSubdomainServer() {
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .times(2)
+      .times(3)
       .reply(404, {})
 
     nock('https://core.blockstack.org')
@@ -271,6 +281,7 @@ export function testSubdomainServer() {
 
 
     nock('https://bitcoinfees.earn.com')
+      .persist()
       .get('/api/v1/fees/recommended')
       .reply(200, {fastestFee: 10})
 
@@ -282,7 +293,12 @@ export function testSubdomainServer() {
                        tx_output_n: 1,
                        confirmations: 100,
                        tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
-      
+
+    nock('https://blockchain.info')
+      .persist()
+      .get('/latestblock?cors=true')
+      .reply(200, { height: 300 })
+
     nock('https://blockchain.info')
       .persist()
       .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
@@ -296,11 +312,6 @@ export function testSubdomainServer() {
       .persist()
       .post('/pushtx?cors=true')
       .reply(200, 'transaction Submitted')
-
-    nock('https://core.blockstack.org')
-      .get('/v1/blockchains/bitcoin/consensus')
-      .reply(200, { consensus_hash: 'dfe87cfd31ffa2a3b8101e3e93096f2b' })
-
 
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
@@ -344,9 +355,42 @@ export function testSubdomainServer() {
 
         return Promise.all([acquiredWait, failureBatch])
       })
+      .then(() => {
+        nock('https://core.blockstack.org')
+          .get('/v1/info')
+          .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
+                        "first_block": 373601,
+                        "indexing": false,
+                        // Try a STALE info return
+                        "last_block_processed": 10,
+                        "last_block_seen": 606368,
+                        "server_alive": true,
+                        "server_version": "21.0.0.0",
+                        "testnet": false,
+                        "zonefile_count": 106499 })
+
+      })
+      .then(() => s.submitBatch())
+      .then(() => t.ok(false, 'Should have failed to submit a stale batch'))
+      .catch(() => t.ok(true, 'Should not have submitted a batch'))
+      .then(() => {
+        nock('https://core.blockstack.org')
+          .get('/v1/info')
+          .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
+                        "first_block": 373601,
+                        "indexing": false,
+                        // Try a STALE info return
+                        "last_block_processed": 606360,
+                        "last_block_seen": 606368,
+                        "server_alive": true,
+                        "server_version": "21.0.0.0",
+                        "testnet": false,
+                        "zonefile_count": 106499 })
+
+      })
       .then(() => s.submitBatch())
       .then(() => t.ok(true, 'Should have submitted a batch'))
-      .catch(() => t.ok(false, 'Should not have failed'))
+      .catch(() => t.ok(false, 'Should have submitted a batch'))
       .then(() => {
         nock('https://core.blockstack.org')
           .get('/v1/names/foo.bar.id')
@@ -363,8 +407,13 @@ export function testSubdomainServer() {
                        `foo.bar.id should still be queued for update, was: ${x.status}`)))
   })
 
-  test('shutdown', (t) => {
+  test('shutdown', async (t) => {
     t.plan(1)
+
+    nock('https://blockchain.info')
+      .persist()
+      .get('/latestblock?cors=true')
+      .reply(200, { height: 300 })
 
     let s = new SubdomainServer({ domainName: 'bar.id',
                                   ownerKey: testSK,
@@ -375,16 +424,24 @@ export function testSubdomainServer() {
                                   ipLimit: 0,
                                   proofsRequired: 0,
                                   domainUri: 'http://myfreewebsite.com' })
-    return s.initializeServer()
-      .then(() => s.shutdown())
-      .then(() => t.ok(true, 'should shut down'))
-      .catch((e) => { console.log(e)
-                      t.ok(false, 'failed to shut down') })
+    await s.initializeServer()
+    try {
+      await s.shutdown()
+      t.ok(true, 'should shut down')
+    } catch (e) {
+      console.log(e)
+      t.ok(false, 'failed to shut down')
+    }
   })
 
-  test('submitBatch not owned', (t) => {
+  test('submitBatch not owned', async (t) => {
     t.plan(8)
     nock.cleanAll()
+
+    nock('https://blockchain.info')
+      .persist()
+      .get('/latestblock?cors=true')
+      .reply(200, { height: 300 })
 
     nock('https://core.blockstack.org')
       .persist()
@@ -430,8 +487,16 @@ export function testSubdomainServer() {
       .reply(200, 'transaction Submitted')
 
     nock('https://core.blockstack.org')
-      .get('/v1/blockchains/bitcoin/consensus')
-      .reply(200, { consensus_hash: 'dfe87cfd31ffa2a3b8101e3e93096f2b' })
+      .get('/v1/info')
+      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
+                    "first_block": 373601, 
+                    "indexing": false, 
+                    "last_block_processed": 606362, 
+                    "last_block_seen": 606368, 
+                    "server_alive": true, 
+                    "server_version": "21.0.0.0", 
+                    "testnet": false, 
+                    "zonefile_count": 106499 })
 
 
     let s = new SubdomainServer({ domainName: 'bar.id',
@@ -443,61 +508,58 @@ export function testSubdomainServer() {
                                   ipLimit: 0,
                                   proofsRequired: 0,
                                   domainUri: 'http://myfreewebsite.com' })
-    s.initializeServer()
-      .then(() => s.submitBatch())
-      .then((resp) => t.equal(resp, null, 'should skip submission of an empty batch'))
-      .then(
-        () =>
-          s.queueRegistration('foo', testAddress, 0, 'hello-world')
-          .then(() => t.ok(true, 'foo.foo.id should be queued')))
-      .then(
-        () =>
-          s.queueRegistration('bar', testAddress2, 0, 'hello-world')
-          .then(() => t.ok(true, 'should queue bar.bar.id')))
-      .then(() => {
-        // make it so that foo.bar.id is now *not* valid to register
-        nock('https://core.blockstack.org')
-          .get('/v1/names/foo.bar.id')
-          .times(1)
-          .reply(200, {})
+
+    await s.initializeServer()
+    let resp = await s.submitBatch()
+    t.equal(resp, null, 'should skip submission of an empty batch')
+    await s.queueRegistration('foo', testAddress, 0, 'hello-world')
+    t.ok(true, 'foo.foo.id should be queued')
+    await s.queueRegistration('bar', testAddress2, 0, 'hello-world')
+    t.ok(true, 'should queue bar.bar.id')
+
+    // make it so that foo.bar.id is now *not* valid to register
+    nock('https://core.blockstack.org')
+      .get('/v1/names/foo.bar.id')
+      .times(1)
+      .reply(200, {})
+
+    const acquiredWait = s.lock.acquire('queue', () => {
+      return new Promise(resolve => {
+        setTimeout(() => resolve(), 9000)
       })
-      .then(() => {
-        const acquiredWait = s.lock.acquire('queue', () => {
-          return new Promise(resolve => {
-            setTimeout(() => resolve(), 9000)
+    })
+
+    const failureBatch = s.submitBatch()
+          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+          .catch((err) => {
+            t.equal(err.message, 'Failed to obtain lock')
           })
-        })
 
-        const failureBatch = s.submitBatch()
-              .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-              .catch((err) => {
-                t.equal(err.message, 'Failed to obtain lock')
-              })
+    const failureCheck = s.checkZonefiles()
+          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+          .catch((err) => {
+            t.equal(err.message, 'Failed to obtain lock')
+          })
 
-        const failureCheck = s.checkZonefiles()
-              .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-              .catch((err) => {
-                t.equal(err.message, 'Failed to obtain lock')
-              })
+    await Promise.all([acquiredWait, failureBatch, failureCheck])
 
-        return Promise.all([acquiredWait, failureBatch, failureCheck])
-      })
-      .then(() => s.submitBatch())
-      .then(() => t.ok(false, 'Should not have submitted a batch'))
-      .catch(() => t.ok(true, 'Should have failed'))
-      .then(() => {
-        nock('https://core.blockstack.org')
-          .get('/v1/names/foo.bar.id')
-          .times(1)
-          .reply(404, {})
-      })
-      .then(() => s.getSubdomainStatus('bar')
-            .then((x) =>
-                  t.ok(x.status.startsWith('Subdomain is queued'),
-                       `bar.bar.id should still be queued for update`)))
-      .then(() => s.getSubdomainStatus('foo')
-            .then((x) =>
-                  t.ok(x.status.startsWith('Subdomain is queued'),
-                       `foo.bar.id should still be queued for update`)))
+    try {
+      await s.submitBatch()
+      t.ok(false, 'Should not have submitted a batch')
+    } catch {
+      t.ok(true, 'Should have failed')
+    }
+
+    nock('https://core.blockstack.org')
+      .get('/v1/names/foo.bar.id')
+      .times(1)
+      .reply(404, {})
+
+    let x = await s.getSubdomainStatus('bar')
+    t.ok(x.status.startsWith('Subdomain is queued'),
+         `bar.bar.id should still be queued for update`)
+    x = await s.getSubdomainStatus('foo')
+    t.ok(x.status.startsWith('Subdomain is queued'),
+         `foo.bar.id should still be queued for update`)
   })
 }

@@ -1,5 +1,21 @@
+/* @flow */
+
 import sqlite3 from 'sqlite3'
 import logger from 'winston'
+
+export type QueueRecord = { subdomainName: string,
+                            owner: string,
+                            sequenceNumber: number,
+                            zonefile: string,
+                            signature: string }
+
+export type SubdomainRecord = { subdomainName: string,
+                                owner: string,
+                                sequenceNumber: number,
+                                zonefile: string,
+                                signature: string,
+                                status: string,
+                                queue_ix: number }
 
 const CREATE_QUEUE = `CREATE TABLE subdomain_queue (
  queue_ix INTEGER PRIMARY KEY,
@@ -31,6 +47,12 @@ const CREATE_TRANSACTIONS_TRACKED = `CREATE TABLE transactions_tracked (
  zonefile TEXT NOT NULL
 );`
 
+const CREATE_TX_INFO = `CREATE TABLE transactions_info (
+ txinfo_ix INTEGER PRIMARY KEY,
+ txHash TEXT NOT NULL UNIQUE,
+ blockHeight INTEGER DEFAULT 0
+);`
+
 const CREATE_IP_INFO = `CREATE TABLE ip_info (
  ipinfo_ix INTEGER PRIMARY KEY,
  ip_address TEXT NOT NULL,
@@ -43,7 +65,7 @@ const CREATE_IP_INFO_INDEX = `CREATE INDEX ip_info_index ON
 
 const SUBDOMAIN_PAGE_SIZE = 100
 
-function dbRun(db: Object, cmd: String, args?: Array) {
+function dbRun(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise<void> {
   if (!args) {
     args = []
   }
@@ -58,7 +80,7 @@ function dbRun(db: Object, cmd: String, args?: Array) {
   })
 }
 
-function dbAll(db: Object, cmd: String, args?: Array) {
+function dbAll(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise<Array<Object>> {
   if (!args) {
     args = []
   }
@@ -75,12 +97,15 @@ function dbAll(db: Object, cmd: String, args?: Array) {
 
 
 export class RegistrarQueueDB {
-  constructor(dbLocation: String) {
+  dbLocation: string
+  db: sqlite3.Database
+
+  constructor(dbLocation: string) {
     this.dbLocation = dbLocation
   }
 
-  initialize() {
-      return new Promise((resolve, reject) => {
+  initialize() : Promise<void> {
+    return new Promise((resolve, reject) => {
       this.db = new sqlite3.Database(this.dbLocation, sqlite3.OPEN_READWRITE, (errOpen) => {
         if (errOpen) {
           logger.warn(`No database found ${this.dbLocation}, creating`)
@@ -102,16 +127,14 @@ export class RegistrarQueueDB {
     })
   }
 
-  checkTablesAndCreate() {
-    return this.tablesExist()
-      .then(needsCreation => {
-        if (needsCreation.length === 0) {
-          return Promise.resolve()
-        } else {
-          logger.info(`Creating ${needsCreation.length} tables.`)
-          return this.createTables(needsCreation)
-        }
-      })
+  async checkTablesAndCreate(): Promise<void> {
+    const needsCreation = await this.tablesExist()
+    if (needsCreation.length === 0) {
+      return
+    } else {
+      logger.info(`Creating ${needsCreation.length} tables.`)
+      await this.createTables(needsCreation)
+    }
   }
 
   tablesExist() {
@@ -130,6 +153,9 @@ export class RegistrarQueueDB {
         if (tables.indexOf('transactions_tracked') < 0) {
           toCreate.push(CREATE_TRANSACTIONS_TRACKED)
         }
+        if (tables.indexOf('tx_info') < 0) {
+          toCreate.push(CREATE_TX_INFO)
+        }
         if (tables.indexOf('ip_info') < 0) {
           toCreate.push(CREATE_IP_INFO)
           toCreate.push(CREATE_IP_INFO_INDEX)
@@ -139,29 +165,27 @@ export class RegistrarQueueDB {
       })
   }
 
-  createTables(toCreate:Array<string>) {
-    let creationPromise = Promise.resolve()
-    toCreate.forEach((createCmd) => {
-      creationPromise = creationPromise.then(() => dbRun(this.db, createCmd))
-    })
-    return creationPromise
+  async createTables(toCreate: Array<string>): Promise<void> {
+    for (const createCmd of toCreate) {
+      await dbRun(this.db, createCmd)
+    }
   }
 
-  addToQueue(subdomainName, owner, sequenceNumber, zonefile) {
+  addToQueue(subdomainName: string, owner: string, sequenceNumber: number, zonefile: string): Promise<void> {
     const dbCmd = 'INSERT INTO subdomain_queue ' +
           '(subdomainName, owner, sequenceNumber, zonefile, status) VALUES (?, ?, ?, ?, ?)'
     const dbArgs = [subdomainName, owner, sequenceNumber, zonefile, 'received']
     return dbRun(this.db, dbCmd, dbArgs)
   }
 
-  updateStatusFor(subdomains: Array<String>, status: String, statusMore: String) {
+  async updateStatusFor(subdomains: Array<string>, status: string, statusMore: string): Promise<string> {
     const cmd = 'UPDATE subdomain_queue SET status = ?, status_more = ? WHERE subdomainName = ?'
-    return Promise.all(subdomains.map(
+    await Promise.all(subdomains.map(
       name => dbRun(this.db, cmd, [status, statusMore, name])))
-      .then(() => statusMore)
+    return statusMore
   }
 
-  logRequestorData(subdomainName: String, ownerAddress: String, ipAddress: String) {
+  logRequestorData(subdomainName: string, ownerAddress: string, ipAddress: string) {
     const lookup = `SELECT queue_ix FROM subdomain_queue WHERE subdomainName = ?
                     AND owner = ? AND sequenceNumber = 0`
     const insert = 'INSERT INTO ip_info (ip_address, owner, queue_ix) VALUES (?, ?, ?)'
@@ -175,65 +199,103 @@ export class RegistrarQueueDB {
       })
   }
 
-  getOwnerAddressCount(ownerAddress: String) {
+  getOwnerAddressCount(ownerAddress: string) {
     const lookup = 'SELECT * FROM ip_info WHERE owner = ?'
     return dbAll(this.db, lookup, [ownerAddress])
       .then((results) => results.length)
   }
 
-  getIPAddressCount(ipAddress: String) {
+  getIPAddressCount(ipAddress: string) {
     const lookup = 'SELECT * FROM ip_info WHERE ip_address = ?'
     return dbAll(this.db, lookup, [ipAddress])
       .then((results) => results.length)
   }
 
-  fetchQueue() {
+  async fetchQueue(): Promise<QueueRecord[]> {
     const cmd = 'SELECT subdomainName, owner, sequenceNumber, zonefile, signature' +
           ' FROM subdomain_queue WHERE status = "received"'
-    return dbAll(this.db, cmd)
-      .then((results) => results.map( // parse the sequenceNumber
-        x => Object.assign({}, x, { sequenceNumber: parseInt(x.sequenceNumber) })))
+    const results: { subdomainName: string,
+                     owner: string,
+                     sequenceNumber: string,
+                     zonefile: string,
+                     signature: string }[] = await dbAll(this.db, cmd)
+    return results.map(x => {
+      const out = {
+        subdomainName: x.subdomainName,
+        owner: x.owner,
+        sequenceNumber: parseInt(x.sequenceNumber),
+        zonefile: x.zonefile,
+        signature: x.signature
+      }
+      return out
+    })
   }
 
-  getStatusRecord(subdomainName) {
+  getStatusRecord(subdomainName: string) {
     const lookup = 'SELECT status, status_more, owner, zonefile FROM subdomain_queue' +
           ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
     return dbAll(this.db, lookup, [subdomainName])
   }
 
-  listSubdomains(iterator, timeLimit) {
+  async listSubdomains(iterator: number, timeLimit: number): Promise<SubdomainRecord[]> {
     const listSQL = 'SELECT subdomainName, owner, sequenceNumber, zonefile, signature, ' +
       'status, queue_ix FROM subdomain_queue WHERE ' +
       'queue_ix >= ? AND received_ts >= DATETIME(?, "unixepoch") ORDER BY queue_ix LIMIT ?'
-    return dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE])
-      .then((results) => results.map( // parse the sequenceNumber and timestamp
-        x => Object.assign({}, x, {
-          sequenceNumber: parseInt(x.sequenceNumber)
-        })))
+    const results: { subdomainName: string,
+                     owner: string,
+                     sequenceNumber: string,
+                     zonefile: string,
+                     signature: string,
+                     status: string,
+                     queue_ix: number }[] =
+          await dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE])
+    return results.map(x => {
+      const out = {
+        subdomainName: x.subdomainName,
+        owner: x.owner,
+        sequenceNumber: parseInt(x.sequenceNumber),
+        zonefile: x.zonefile,
+        signature: x.signature,
+        status: x.status,
+        queue_ix: x.queue_ix
+      }
+      return out
+    })
   }
 
-  backupZonefile(zonefile: String) {
+  backupZonefile(zonefile: string): Promise<void> {
     return dbRun(this.db, 'INSERT INTO subdomain_zonefile_backups (zonefile) VALUES (?)',
                  [zonefile])
   }
 
-  trackTransaction(txHash, zonefile) {
-    return dbRun(this.db, 'INSERT INTO transactions_tracked (txHash, zonefile) VALUES (?, ?)',
-                 [txHash, zonefile])
-      .then(() => txHash)
+  async trackTransaction(txHash: string, zonefile: string): Promise<string> {
+    await dbRun(this.db, 'INSERT INTO transactions_tracked (txHash, zonefile) VALUES (?, ?)',
+                [txHash, zonefile])
+    return txHash
   }
 
   getTrackedTransactions() {
-    return dbAll(this.db, 'SELECT txHash, zonefile FROM transactions_tracked')
+    return dbAll(this.db,
+                 'SELECT t.txHash, t.zonefile, IFNULL(ti.blockHeight, 0) FROM transactions_tracked as t ' +
+                 'LEFT JOIN transactions_info as ti ON t.txHash = ti.txHash')
   }
 
-  flushTrackedTransactions(transactions: Array<{txHash: String}>) {
-    const cmd = 'DELETE FROM transactions_tracked WHERE txHash = ?'
-    return Promise.all(transactions.map(
+  async updateTransactionHeights(transactions: Array<{ txHash: string, blockHeight: number, status: boolean }>) : Promise<void> {
+    const cmd = 'REPLACE INTO transactions_info(txHash, blockHeight) VALUES (?, ?)'
+    await Promise.all(transactions.map(
+      entry => dbRun(this.db, cmd, [entry.blockHeight, entry.txHash])))
+  }
+
+  async flushTrackedTransactions(transactions: Array<{txHash: string, blockHeight: number, status: boolean}>) : Promise<void> {
+    let cmd = 'DELETE FROM transactions_tracked WHERE txHash = ?'
+    await Promise.all(transactions.map(
+      entry => dbRun(this.db, cmd, [entry.txHash])))
+    cmd = 'DELETE FROM transactions_info WHERE txHash = ?'
+    await Promise.all(transactions.map(
       entry => dbRun(this.db, cmd, [entry.txHash])))
   }
 
-  shutdown() {
+  shutdown(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.close((err) => {
         if (err) {

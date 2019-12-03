@@ -2,12 +2,23 @@
 import logger from 'winston'
 import AsyncLock from 'async-lock'
 
-import { makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
+import { updateGlobalBlockHeight, makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
 import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './lookups'
 import { RegistrarQueueDB } from './db'
+import type { SubdomainRecord, QueueRecord } from './db'
 
 const TIME_WEEK = 604800
 const QUEUE_LOCK = 'queue'
+
+export const SERVER_GLOBALS = { lastSeenBlockHeight: 0 }
+
+type SubdomainResult = {
+  name: string,
+  address: string,
+  sequence: number,
+  zonefile: string,
+  status: string,
+  iterator: number }
 
 export class SubdomainServer {
   domainName: string
@@ -24,6 +35,7 @@ export class SubdomainServer {
   db: RegistrarQueueDB
   lock: AsyncLock
   checkCoreOnBatching: boolean
+  lastSeenBlock: number
 
   constructor(config: {domainName: string, ownerKey: string,
                        paymentKey: string, dbLocation: string,
@@ -35,6 +47,9 @@ export class SubdomainServer {
                        apiKeys?: Array<string>,
                        ipWhitelist?: Array<string>,
                        nameMinLength: number}) {
+
+    this.lastSeenBlock = 0
+
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
     this.paymentKey = config.paymentKey
@@ -63,8 +78,9 @@ export class SubdomainServer {
     this.lock = new AsyncLock()
   }
 
-  initializeServer() {
-    return this.db.initialize()
+  async initializeServer() {
+    await updateGlobalBlockHeight()
+    await this.db.initialize()
   }
 
   isValidLength(subdomainName: string) {
@@ -241,7 +257,7 @@ export class SubdomainServer {
     return this.db.updateStatusFor(namesSubmitted, 'submitted', txHash)
   }
 
-  async markTransactionsComplete(entries: Array<{ txHash: string, status: boolean }>): Promise<void> {
+  async markTransactionsComplete(entries: Array<{ txHash: string, status: boolean, blockHeight: number }>): Promise<void> {
     if (entries.length > 0) {
       logger.info(`${entries.length} transactions newly finished.`,
                   { msgType: 'tx_finish', count: entries.length })
@@ -253,16 +269,12 @@ export class SubdomainServer {
     return await this.db.flushTrackedTransactions(entries)
   }
 
-  fetchQueue() {
-    return this.db.fetchQueue()
-  }
-
   async submitBatch() : Promise<string> {
     try {
       return await this.lock.acquire(QUEUE_LOCK, async () => {
         try {
           logger.debug('Obtained lock, fetching queue.')
-          const queue = await this.fetchQueue()
+          const queue: QueueRecord[] = await this.db.fetchQueue()
           const results = await Promise.all(
             queue.map(subdomainOp => isRegistrationValid(
               subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
@@ -364,8 +376,13 @@ export class SubdomainServer {
             logger.debug(`${entries.length} outstanding transactions.`)
           }
           const statuses = await checkTransactions(entries)
+
+          await this.db.updateTransactionHeights(entries)
+
           const completed = statuses.filter(x => x.status)
+
           await this.markTransactionsComplete(completed)
+
           logger.debug('Lock released')
         } catch (err) {
           logger.error(`Failure trying to publish zonefiles: ${err}`)
@@ -386,7 +403,8 @@ export class SubdomainServer {
     logger.debug(`Listing subdomain page ${page}`)
     const timeLimit = (new Date().getTime() / 1000) - TIME_WEEK
 
-    const rows = (await this.db.listSubdomains(page, timeLimit))
+    const records: SubdomainRecord[] = await this.db.listSubdomains(page, timeLimit)
+    const rows: SubdomainResult[] = records
           .map((row) => {
             const formattedRow = {
               name: `${row.subdomainName}.${this.domainName}`,
