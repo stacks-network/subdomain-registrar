@@ -161,6 +161,8 @@ export class SubdomainServer {
   async queueRegistration(subdomainName: string, owner: string,
                     sequenceNumber: number, zonefile: string,
                     ipAddress: string = '', authorization: ?string = '') : Promise<void> {
+    // do a quick pre-check for the subdomain name so that we can exit early in the
+    //   the "non-race-condition" case.
     const inQueue = await this.isSubdomainInQueue(subdomainName)
     if (inQueue) {
       logger.warn(`Name queued already: ${subdomainName}`,
@@ -186,6 +188,12 @@ export class SubdomainServer {
     try {
       await this.lock.acquire(QUEUE_LOCK, async () => {
         try {
+          // check again while holding the QUEUE_LOCK in case we raced.
+          if (await this.isSubdomainInQueue(subdomainName)) {
+            logger.warn(`Name queued already: ${subdomainName}`,
+                        { msgType: 'repeat_name', name: subdomainName, ip: ipAddress })
+            throw new Error('Subdomain operation already queued for this name.')
+          }
           await this.db.addToQueue(subdomainName, owner, sequenceNumber, zonefile)
           try {
             await this.db.logRequestorData(subdomainName, owner, ipAddress)
