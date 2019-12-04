@@ -85,8 +85,16 @@ export function unitTestOperations() {
       .reply(200, 'transaction Submitted')
 
     nock('https://core.blockstack.org')
-      .get('/v1/blockchains/bitcoin/consensus')
-      .reply(200, { consensus_hash: 'dfe87cfd31ffa2a3b8101e3e93096f2b' })
+      .get('/v1/info')
+      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
+                    "first_block": 373601, 
+                    "indexing": false, 
+                    "last_block_processed": 606362, 
+                    "last_block_seen": 606368, 
+                    "server_alive": true, 
+                    "server_version": "21.0.0.0", 
+                    "testnet": false, 
+                    "zonefile_count": 106499 })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/bar.id')
@@ -97,12 +105,13 @@ export function unitTestOperations() {
       .then(x => t.equal(x, '8b85c2b7c7b1d67fbf2a8617bb56c30f8f7f4ae022e6bb4106143c58cc272c22'))
   })
 
-  test('checkTransactions', (t) => {
+  test('checkTransactions', async (t) => {
     t.plan(1)
 
     let txs = [{hash: 'txhash-0', height: 289},
                {hash: 'txhash-1', height: 293},
-               {hash: 'txhash-2', height: 294}]
+               {hash: 'txhash-2', height: 294},
+               {hash: 'txhash-3', height: undefined }]
         .map(x => ({ zonefile: 'hello world',
                      txHash: x.hash,
                      blockheight: x.height }))
@@ -129,14 +138,16 @@ export function unitTestOperations() {
       .post('/v1/zonefile/')
       .reply(202, { servers: ['me.co'] })
 
-    checkTransactions(txs)
-      .then( results => t.deepEqual( results,
-                                     [ { txHash: 'txhash-0',
-                                         status: true },
-                                       { txHash: 'txhash-1',
-                                         status: true },
-                                       { txHash: 'txhash-2',
-                                         status: false } ] ))
+    const results = await checkTransactions(txs)
+    t.deepEqual( results,
+                 [ { txHash: 'txhash-0',
+                     status: true, blockHeight: 289 },
+                   { txHash: 'txhash-1',
+                     status: true, blockHeight: 293 },
+                   { txHash: 'txhash-2',
+                     status: false, blockHeight: 294 },
+                   { txHash: 'txhash-3',
+                     status: false, blockHeight: -1 } ] )
   })
 
   test('makeUpdateZonefile', (t) => {

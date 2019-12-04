@@ -1,6 +1,6 @@
 {
   "name": "blockstack-subdomain-registrar",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "A subdomain registrar for Blockstack",
   "main": "lib/index.js",
   "dependencies": {
@@ -23,7 +23,10 @@
     "@babel/core": "^7.6.3",
     "@babel/preset-env": "^7.6.3",
     "@babel/preset-flow": "^7.0.0",
+    "@babel/register": "^7.7.4",
+    "@istanbuljs/nyc-config-babel": "^2.1.1",
     "babel-eslint": "^10.0.3",
+    "babel-plugin-istanbul": "^5.2.0",
     "eslint": "^6.7.1",
     "flow-bin": "^0.109.0",
     "nock": "^9.1.6",
@@ -40,11 +43,14 @@
     "lint": "eslint src",
     "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",
     "test-inner": "npm run compile-tests && node tests/lib/index.js",
-    "test": "nyc --reporter=text npm run test-inner"
+    "test": "nyc --reporter=text npm run test-inner",
+    "report-lcov": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "nyc": {
+    "extends": "@istanbuljs/nyc-config-babel",
+    "all": true,
     "include": [
-      "lib/**"
+      "src/**"
     ]
   },
   "repository": {

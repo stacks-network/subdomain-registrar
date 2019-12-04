@@ -1,6 +1,7 @@
 /* @flow */
 
 import { transactions, config as bskConfig, safety, hexStringToECPair } from 'blockstack'
+import { SERVER_GLOBALS } from './server'
 import { makeZoneFile } from 'zone-file'
 import logger from 'winston'
 import fetch from 'node-fetch'
@@ -12,22 +13,29 @@ export type SubdomainOp = {
   sequenceNumber: number,
   zonefile: string,
   subdomainName: string,
-  signature?: string
+  signature: string
 }
 
 const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
 
 // reconfigure obtaining consensus hash
+bskConfig.network.getConsensusHash = async function() {
+  const httpResponse = await fetch('https://core.blockstack.org/v1/info')
+  const jsonResponse = await httpResponse.json()
+  const lastBlockSeen = SERVER_GLOBALS.lastSeenBlockHeight
 
-const getConsensusHashInner = bskConfig.network.getConsensusHash
+  if (jsonResponse.last_block_processed + 10 < lastBlockSeen) {
+    logger.error('core.blockstack.org is >10 blocks behind the chain tip',
+                 { msgType: 'stale_core', lastBlockSeen, coreLastProcessed: jsonResponse.last_block_processed })
+    throw new Error('core.blockstack.org is >10 blocks behind the chain tip')
+  }
 
-bskConfig.network.getConsensusHash = function() {
-  return getConsensusHashInner.apply(bskConfig.network, [])
-    .then(x => {
-      logger.info(`Obtained consensus hash ${x}`,
-                  { msgType: 'consensus_hash', consensusHash: x })
-      return x
-    })
+  const consensusHash = jsonResponse.consensus
+
+  logger.info(`Obtained consensus hash ${consensusHash}`,
+              { msgType: 'consensus_hash', consensusHash })
+
+  return consensusHash
 }
 
 export function destructZonefile(zonefile: string) {
@@ -113,21 +121,37 @@ export async function submitUpdate(
   return await bskConfig.network.broadcastTransaction(txHex)
 }
 
-export async function checkTransactions(txs: Array<{txHash: string, zonefile: string}>):
-Promise<Array<{txHash: string, status: boolean}>> {
-
+export async function updateGlobalBlockHeight(): Promise<void> {
   const blockHeight = await bskConfig.network.getBlockHeight()
+  if (SERVER_GLOBALS.lastSeenBlockHeight > blockHeight) {
+    throw new Error(`Last seen block ${SERVER_GLOBALS.lastSeenBlockHeight} is greater than returned block height ${blockHeight}`)
+  }
+  SERVER_GLOBALS.lastSeenBlockHeight = blockHeight
+}
+
+export async function checkTransactions(txs: Array<{txHash: string, zonefile: string, blockHeight: number}>):
+Promise<Array<{txHash: string, status: boolean, blockHeight: number}>> {
+
+  await updateGlobalBlockHeight()
+
+  const blockHeight = SERVER_GLOBALS.lastSeenBlockHeight
 
   return await Promise.all(
     txs.map(async (tx) => {
-      const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
-      if (! txInfo.block_height) {
-        logger.info('Could not get block_height, probably unconfirmed.',
-                    { msgType: 'unconfirmed', txid: tx.txHash })
-        return { txHash: tx.txHash, status: false }
-      } else if (txInfo.block_height + 7 > blockHeight) {
-        logger.debug(`block_height for ${tx.txHash}: ${txInfo.block_height} --- has ${1 + blockHeight - txInfo.block_height} confirmations`)
-        return { txHash: tx.txHash, status: false }
+      if (!tx.blockHeight || tx.blockHeight <= 0) {
+        const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
+        if (! txInfo.block_height) {
+          logger.info('Could not get block_height, probably unconfirmed.',
+                      { msgType: 'unconfirmed', txid: tx.txHash })
+          return { txHash: tx.txHash, status: false, blockHeight: -1 }
+        } else {
+          tx.blockHeight = txInfo.block_height
+        }
+      }
+
+      if (tx.blockHeight + 7 > blockHeight) {
+        logger.debug(`block_height for ${tx.txHash}: ${tx.blockHeight} --- has ${1 + blockHeight - tx.blockHeight} confirmations`)
+        return { txHash: tx.txHash, status: false, blockHeight: tx.blockHeight }
       } else {
         try {
           if (bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org') {
@@ -135,14 +159,14 @@ Promise<Array<{txHash: string, status: boolean}>> {
             // this is horrible. I know. but the reasons have to do with load balancing
             // on node.blockstack.org and Atlas peering.
             await directlyPublishZonefile(tx.zonefile)
-            return { txHash: tx.txHash, status: true }
+            return { txHash: tx.txHash, status: true, blockHeight: tx.blockHeight }
           } else {
             await bskConfig.network.broadcastZoneFile(tx.zonefile)
-            return { txHash: tx.txHash, status: true }
+            return { txHash: tx.txHash, status: true, blockHeight: tx.blockHeight }
           }
         } catch (err) {
           logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
-          return { txHash: tx.txHash, status: false}
+          return { txHash: tx.txHash, status: false, blockHeight: tx.blockHeight }
         }
       }
     }))

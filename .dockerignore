@@ -2,5 +2,6 @@
 node_modules
 lib
 Dockerfile
-package-lock.json
 data
+coverage.lcov
+.nyc_output

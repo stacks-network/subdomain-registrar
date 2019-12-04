@@ -10,5 +10,6 @@ WORKDIR /src/subdomain-registrar
 COPY . .
 
 RUN npm i
+RUN npm run build
 
-CMD npm run start
+CMD node lib/index.js
