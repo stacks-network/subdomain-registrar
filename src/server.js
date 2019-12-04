@@ -79,6 +79,9 @@ export class SubdomainServer {
   }
 
   async initializeServer() {
+    // reset global var -- this will only come up in testing,
+    //  at runtime, it's one server instance per process
+    SERVER_GLOBALS.lastSeenBlockHeight = 0
     await updateGlobalBlockHeight()
     await this.db.initialize()
   }
