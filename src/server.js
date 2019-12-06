@@ -9,6 +9,7 @@ import type { SubdomainRecord, QueueRecord } from './db'
 
 const TIME_WEEK = 604800
 const QUEUE_LOCK = 'queue'
+const BATCH_LOCK = 'batch'
 
 export const SERVER_GLOBALS = { lastSeenBlockHeight: 0 }
 
@@ -282,25 +283,29 @@ export class SubdomainServer {
 
   async submitBatch() : Promise<string> {
     try {
-      return await this.lock.acquire(QUEUE_LOCK, async () => {
+      return await this.lock.acquire(BATCH_LOCK, async () => {
         try {
-          logger.debug('Obtained lock, fetching queue.')
-          const queue: QueueRecord[] = await this.db.fetchQueue()
-          const results = await Promise.all(
-            queue.map(subdomainOp => isRegistrationValid(
-              subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
-              parseInt(subdomainOp.sequenceNumber), this.checkCoreOnBatching)))
-          const valid = queue.filter((op, opIndex) => results[opIndex])
-          const invalid = queue.filter((op, opIndex) => !results[opIndex])
-          invalid.forEach(
-            op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
-                              'because it is not valid.',
-                              { msgType: 'skip_batch_inclusion', name: op.subdomainName }))
+          const valid = await this.lock.acquire(QUEUE_LOCK, async () => {
+            logger.debug('Obtained queue lock, fetching queue.')
+            const queue: QueueRecord[] = await this.db.fetchQueue()
+            const results = await Promise.all(
+              queue.map(subdomainOp => isRegistrationValid(
+                subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
+                parseInt(subdomainOp.sequenceNumber), this.checkCoreOnBatching)))
+            const valid = queue.filter((op, opIndex) => results[opIndex])
+            const invalid = queue.filter((op, opIndex) => !results[opIndex])
+            invalid.forEach(
+              op => logger.warn(`Skipping registration of ${op.subdomainName} ` +
+                                'because it is not valid.',
+                                { msgType: 'skip_batch_inclusion', name: op.subdomainName }))
+            return valid
+          }, { timeout: 5000 })
 
           if (valid.length === 0) {
             logger.debug(`${valid.length} items in the queue.`)
             return null
           }
+
           logger.info(`Constructing batch with ${valid.length} currently queued.`,
                       { msgType: 'begin_batch', currentQueue: valid.length })
           const update = makeUpdateZonefile(this.domainName, this.uriEntries, valid, this.zonefileSize)
@@ -375,7 +380,7 @@ export class SubdomainServer {
   async checkZonefiles() {
     logger.debug('Checking for outstanding transactions.')
     try {
-      return await this.lock.acquire(QUEUE_LOCK, async () => {
+      return await this.lock.acquire(BATCH_LOCK, async () => {
         logger.debug('Obtained lock, checking transactions.')
 
         try {
