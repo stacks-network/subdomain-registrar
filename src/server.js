@@ -252,8 +252,8 @@ export class SubdomainServer {
   }
 
   async isSubdomainInQueue(subdomainName: string): Promise<boolean> {
-    const status = await this.getSubdomainStatus(subdomainName)
-    return (status.statusCode !== 404)
+    const rows = await this.db.getStatusRecord(subdomainName)
+    return rows.length > 0
   }
 
   backupZonefile(zonefile: string) {

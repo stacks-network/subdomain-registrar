@@ -92,8 +92,8 @@ export function testSubdomainServer() {
           s.queueRegistration('foo', testAddress, 0, 'hello-world', 'foo')
           .then(() => t.ok(false, 'foo.foo.id should not be a valid id to queue'))
           .catch((err) => {
-            t.equal(err.message, 'Subdomain operation already queued for this name.',
-                    'foo.foo.id should not be a valid id to queue') }))
+            t.equal(err.message,
+                    'Requested subdomain operation is invalid.') }))
       .then(
         () =>
           s.queueRegistration('bar', 'm123', 0, 'hello-world', 'bar')
@@ -272,7 +272,7 @@ export function testSubdomainServer() {
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .times(3)
+      .times(2)
       .reply(404, {})
 
     nock('https://core.blockstack.org')
@@ -334,7 +334,7 @@ export function testSubdomainServer() {
     // make it so that foo.bar.id is now *not* valid to register
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .times(2)
+      .times(1)
       .reply(200, { status: 'registered_subdomain'})
 
 
@@ -389,9 +389,9 @@ export function testSubdomainServer() {
     t.equal(b, expected_tx)
 
     nock('https://core.blockstack.org')
-      .persist()
       .get('/v1/names/foo.bar.id')
-      .reply(404, {})
+      .times(1)
+      .reply(404, { status: 'registered_subdomain'})
 
     let x = await s.getSubdomainStatus('bar')
     t.ok(x.status.startsWith('Your subdomain was registered in transaction'),

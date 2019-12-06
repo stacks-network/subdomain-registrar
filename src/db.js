@@ -153,7 +153,7 @@ export class RegistrarQueueDB {
         if (tables.indexOf('transactions_tracked') < 0) {
           toCreate.push(CREATE_TRANSACTIONS_TRACKED)
         }
-        if (tables.indexOf('tx_info') < 0) {
+        if (tables.indexOf('transactions_info') < 0) {
           toCreate.push(CREATE_TX_INFO)
         }
         if (tables.indexOf('ip_info') < 0) {
