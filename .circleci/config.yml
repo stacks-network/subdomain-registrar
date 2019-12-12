@@ -86,12 +86,18 @@ jobs:
             docker push $IMAGE_NAME:$IMAGE_TAG
 workflows:
   version: 2
-  test-all:
+  test-and-build:
     jobs:
       - build
+          filters:
+            tags:
+              only: /.*/
       - build-docker:
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
       - push-docker-tags:
           requires:
             - build
