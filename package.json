@@ -1,6 +1,6 @@
 {
   "name": "blockstack-subdomain-registrar",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "A subdomain registrar for Blockstack",
   "main": "lib/index.js",
   "dependencies": {
