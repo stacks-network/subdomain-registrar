@@ -47,3 +47,32 @@ jobs:
       - run: npm run report-lcov
       - codecov/upload:
           file: coverage.lcov
+   build-docker-tags:
+     docker:
+       - image: circleci/buildpack-deps:latest
+     working_directory: ~/repo
+     steps:
+       - checkout
+       - setup_remote_docker
+       - run:
+           name: build docker image
+           command: |
+             IMAGE_TAG=${CIRCLE_TAG}
+             docker build . -t $IMAGE_NAME:$IMAGE_TAG
+       - run:
+           name: push docker image
+           command: docker push $IMAGE_NAME:$IMAGE_TAG
+workflows:
+  version: 2
+  test-all:
+    jobs:
+      - build
+      - build-docker-tags:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+
