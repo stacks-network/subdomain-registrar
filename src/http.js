@@ -15,7 +15,23 @@ export function makeHTTPServer(config) {
   const server = new SubdomainServer(config)
 
   if (config.prometheus && config.prometheus.start && config.prometheus.port) {
-    app.use(createPrometheusMiddleware({ app }))
+    app.use(createPrometheusMiddleware({
+      app,
+      options: {
+        normalizePath: (path) => {
+          if (path.startsWith('/v1/names')) {
+            return '/v1/names'
+          }
+          if (path.startsWith('/status')) {
+            return '/status'
+          }
+          if (path.startsWith('/v1/names')) {
+            return '/list'
+          }
+          return path
+        }
+      }
+    }))
     const port = config.prometheus.port
 
     // Create `/metrics` endpoint on separate server

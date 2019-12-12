@@ -400,7 +400,7 @@ export class SubdomainServer {
           logger.error(err.stack)
           throw new Error(`Failed to check transaction status: ${err}`)
         }
-      }, { timeout: 1 })
+      }, { timeout: 5000 })
     } catch(err) {
       if (err && err.message && err.message == 'async-lock timed out') {
         throw new Error('Failed to obtain lock')
