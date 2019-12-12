@@ -80,6 +80,7 @@ jobs:
       - run:
           name: push docker image
           command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             IMAGE_TAG=${CIRCLE_TAG}
             docker tag $IMAGE_NAME:latest $IMAGE_NAME:$IMAGE_TAG
             docker push $IMAGE_NAME:$IMAGE_TAG
