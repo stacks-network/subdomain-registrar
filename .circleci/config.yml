@@ -5,6 +5,12 @@
 version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.2
+executors:
+  docker-publisher:
+    environment:
+      IMAGE_NAME: blockstack/subdomain-registrar
+    docker:
+      - image: circleci/buildpack-deps:stretch
 jobs:
   build:
     docker:
@@ -47,29 +53,48 @@ jobs:
       - run: npm run report-lcov
       - codecov/upload:
           file: coverage.lcov
-   build-docker-tags:
-     docker:
-       - image: circleci/buildpack-deps:latest
-     working_directory: ~/repo
+   build-docker:
+     executor: docker-publisher
      steps:
        - checkout
        - setup_remote_docker
        - run:
            name: build docker image
-           command: |
-             IMAGE_TAG=${CIRCLE_TAG}
-             docker build . -t $IMAGE_NAME:$IMAGE_TAG
+           command: docker build . -t $IMAGE_NAME:latest
+       - run:
+           name: save image to workspace
+           command: docker save -o image.tar $IMAGE_NAME:latest
+       - persist_to_workspace:
+           root: .
+           paths:
+             - ./image.tar
+   push-docker-tags:
+     executor: docker-publisher
+     steps:
+       - attach_workspace:
+           at: /tmp/workspace
+       - setup_remote_docker
+       - run:
+           name: load docker image
+           command: docker load -i /tmp/workspace/image.tar
        - run:
            name: push docker image
-           command: docker push $IMAGE_NAME:$IMAGE_TAG
+           command: |
+             IMAGE_TAG=${CIRCLE_TAG}
+             docker tag $IMAGE_NAME:latest $IMAGE_NAME:$IMAGE_TAG
+             docker push $IMAGE_NAME:$IMAGE_TAG
 workflows:
   version: 2
   test-all:
     jobs:
       - build
-      - build-docker-tags:
+      - build-docker:
           requires:
             - build
+      - push-docker-tags:
+          requires:
+            - build
+            - build-docker
           filters:
             branches:
               ignore: /.*/
