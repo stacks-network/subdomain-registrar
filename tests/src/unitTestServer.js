@@ -322,14 +322,20 @@ export function testSubdomainServer() {
                                   checkCoreOnBatching: true,
                                   proofsRequired: 0,
                                   zonefileSize: 4096,
+                                  minBatchSize: 2,
                                   domainUri: 'http://myfreewebsite.com' })
     await s.initializeServer()
     let resp = await s.submitBatch()
     t.equal(resp, null, 'should skip submission of an empty batch')
     await s.queueRegistration('foo', testAddress, 0, 'hello-world')
     t.pass('foo.bar.id should be queued')
+    resp = await s.submitBatch()
+    t.equal(resp, null, 'should skip submission of a size 1 batch')
     await s.queueRegistration('bar', testAddress2, 0, 'hello-world')
     t.pass('should queue bar.bar.id')
+
+    // change batch size back to 1!
+    s.minBatchSize = 1
 
     // make it so that foo.bar.id is now *not* valid to register
     nock('https://core.blockstack.org')
