@@ -36,19 +36,27 @@ export class SubdomainServer {
   lock: AsyncLock
   checkCoreOnBatching: boolean
   lastSeenBlock: number
+  minBatchSize: number
 
-  constructor(config: {domainName: string, ownerKey: string,
-                       paymentKey: string, dbLocation: string,
-                       domainUri?: ?string, resolverUri: ?string,
-                       zonefileSize: number,
-                       ipLimit: number, proofsRequired: number,
-                       disableRegistrationsWithoutKey: boolean,
-                       checkCoreOnBatching: boolean,
-                       apiKeys?: Array<string>,
-                       ipWhitelist?: Array<string>,
-                       nameMinLength: number}) {
+  constructor(config: { domainName: string, ownerKey: string,
+                        paymentKey: string, dbLocation: string,
+                        domainUri?: ?string, resolverUri: ?string,
+                        zonefileSize: number,
+                        ipLimit: number, proofsRequired: number,
+                        disableRegistrationsWithoutKey: boolean,
+                        checkCoreOnBatching: boolean,
+                        apiKeys?: Array<string>,
+                        ipWhitelist?: Array<string>,
+                        nameMinLength: number,
+                        minBatchSize?: number }) {
 
     this.lastSeenBlock = 0
+
+    if (config.minBatchSize) {
+      this.minBatchSize = config.minBatchSize
+    } else {
+      this.minBatchSize = 1
+    }
 
     this.domainName = config.domainName
     this.ownerKey = config.ownerKey
@@ -301,6 +309,12 @@ export class SubdomainServer {
             logger.debug(`${valid.length} items in the queue.`)
             return null
           }
+          if (valid.length < this.minBatchSize) {
+            logger.info('Skipping batch because it is too small.',
+                        { msgType: 'skip_batch', currentQueue: valid.length, minBatchSize: this.minBatchSize })
+            return null
+          }
+
           logger.info(`Constructing batch with ${valid.length} currently queued.`,
                       { msgType: 'begin_batch', currentQueue: valid.length })
           const update = makeUpdateZonefile(this.domainName, this.uriEntries, valid, this.zonefileSize)
