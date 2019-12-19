@@ -60,7 +60,8 @@ const configDefaults = {
   disableRegistrationsWithoutKey: false,
   checkCoreOnBatching: true,
   nameMinLength: 1,
-  prometheus: { start: false, port: 0 }
+  prometheus: { start: false, port: 0 },
+  minBatchSize: 1
 }
 
 

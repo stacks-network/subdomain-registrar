@@ -1,9 +1,6 @@
 {
   "parser": "babel-eslint",
   "plugins": [],
-  "ecmaFeatures": {
-    "modules": true
-  },
   "env": {
     "browser": false,
     "es6": true,
