@@ -5,7 +5,7 @@ import AsyncLock from 'async-lock'
 import { updateGlobalBlockHeight, makeUpdateZonefile, submitUpdate, checkTransactions, hash160 } from './operations'
 import { isRegistrationValid, isSubdomainRegistered, checkProofs } from './lookups'
 import { RegistrarQueueDB } from './db'
-import type { SubdomainRecord, QueueRecord } from './db'
+import { SubdomainRecord, QueueRecord } from './db'
 
 const TIME_WEEK = 604800
 const QUEUE_LOCK = 'queue'
@@ -39,7 +39,7 @@ export class SubdomainServer {
 
   constructor(config: {domainName: string, ownerKey: string,
                        paymentKey: string, dbLocation: string,
-                       domainUri?: ?string, resolverUri: ?string,
+                       domainUri?: string | null, resolverUri: string | null | undefined,
                        zonefileSize: number,
                        ipLimit: number, proofsRequired: number,
                        disableRegistrationsWithoutKey: boolean,
@@ -97,7 +97,7 @@ export class SubdomainServer {
   // returns a truth-y error message if request flags spam check
   //  returns false if the request is not spam
   async spamCheck(subdomainName: string, owner: string, zonefile: string,
-                  ipAddress: ?string, authorization: ?string) {
+                  ipAddress: string, authorization: string) {
     // the logic here is a little convoluted, because I'm trying to short-circuit
     //  the spam checks while also using Promises, which is a little tricky.
     // the logic should encapsulate:
@@ -163,7 +163,7 @@ export class SubdomainServer {
 
   async queueRegistration(subdomainName: string, owner: string,
                     sequenceNumber: number, zonefile: string,
-                    ipAddress: string = '', authorization: ?string = '') : Promise<void> {
+                    ipAddress: string, authorization: string) : Promise<void> {
     // do a quick pre-check for the subdomain name so that we can exit early in the
     //   the "non-race-condition" case.
     const inQueue = await this.isSubdomainInQueue(subdomainName)
@@ -289,7 +289,7 @@ export class SubdomainServer {
           const results = await Promise.all(
             queue.map(subdomainOp => isRegistrationValid(
               subdomainOp.subdomainName, this.domainName, subdomainOp.owner,
-              parseInt(subdomainOp.sequenceNumber), this.checkCoreOnBatching)))
+              subdomainOp.sequenceNumber, this.checkCoreOnBatching)))
           const valid = queue.filter((op, opIndex) => results[opIndex])
           const invalid = queue.filter((op, opIndex) => !results[opIndex])
           invalid.forEach(

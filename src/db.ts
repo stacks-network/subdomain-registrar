@@ -65,7 +65,7 @@ const CREATE_IP_INFO_INDEX = `CREATE INDEX ip_info_index ON
 
 const SUBDOMAIN_PAGE_SIZE = 100
 
-function dbRun(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise<void> {
+function dbRun(db: sqlite3.Database, cmd: string, args?: Array<any>): Promise<void> {
   if (!args) {
     args = []
   }
@@ -80,7 +80,7 @@ function dbRun(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise
   })
 }
 
-function dbAll(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise<Array<Object>> {
+function dbAll(db: sqlite3.Database, cmd: string, args?: any[]): Promise<any[]> {
   if (!args) {
     args = []
   }

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import winston  from 'winston'
 
 import { initializeBlockstackCore, configureRegtest } from './developmode'

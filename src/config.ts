@@ -1,6 +1,37 @@
 import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN } from './developmode'
 import winston from 'winston'
-import fs from 'fs'
+import * as fs from 'fs'
+
+type RegistrarConfig = {
+  domainName: string | null,
+  ownerKey: string | null,
+  paymentKey: string | null,
+  batchDelayPeriod: number,
+  checkTransactionPeriod: number,
+  dbLocation: string,
+  adminPassword: string,
+  domainUri: string | boolean,
+  resolverUri: string | boolean,
+  zonefileSize: number,
+  port: number,
+  ipLimit: number,
+  apiKeys: string[],
+  proofsRequired: number,
+  disableRegistrationsWithoutKey: boolean,
+  checkCoreOnBatching: boolean,
+  nameMinLength: number,
+  prometheus: { start: boolean, port: number },
+  winstonConsoleTransport: { level: string,
+                             handleExceptions: boolean,
+                             timestamp: boolean,
+                             stringify: boolean,
+                             colorize: boolean,
+                             json: boolean }
+  winstonConfig?: { transports:
+    winston.Transport[] }
+  development?: boolean,
+  regtest?: boolean,
+}
 
 const configDevelopDefaults = {
   winstonConsoleTransport: {
@@ -29,6 +60,7 @@ const configDevelopDefaults = {
   proofsRequired: 0,
   disableRegistrationsWithoutKey: false,
   checkCoreOnBatching: true,
+  nameMinLength: 1,
   prometheus: { start: false, port: 0 }
 }
 
@@ -65,7 +97,7 @@ const configDefaults = {
 
 
 export function getConfig() {
-  let config = Object.assign({}, configDefaults)
+  let config: RegistrarConfig = Object.assign({}, configDefaults)
   if (process.env.BSK_SUBDOMAIN_DEVELOP) {
     config = Object.assign({}, configDevelopDefaults)
     config.development = true
@@ -75,7 +107,7 @@ export function getConfig() {
   }
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
     const configFile = process.env.BSK_SUBDOMAIN_CONFIG
-    Object.assign(config, JSON.parse(fs.readFileSync(configFile)))
+    Object.assign(config, JSON.parse(fs.readFileSync(configFile, 'utf-8')))
   }
   if (process.env.BSK_SUBDOMAIN_PAYMENT_KEY) {
     config.paymentKey = process.env.BSK_SUBDOMAIN_PAYMENT_KEY

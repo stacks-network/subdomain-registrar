@@ -175,28 +175,30 @@ export function makeHTTPServer(config) {
       })
   })
 
-  app.get('/list/:iterator', (req, res) => {
+  app.get('/list/:iterator', async (req, res) => {
     // iterator must be a reasonably-sized finite positive integer
-    return Promise.resolve().then(() => {
-      const iterator = req.params.iterator
-      if (!iterator.match(/^[0-9]{1,10}$/)) {
-        logger.warn('List iteratotr must be a reasonably-sized positive integer')
-        return { message: { error: 'Iterator must be a reasonably-sized positive integer' },
-                 statusCode: 400 }
-      }
-      return server.listSubdomainRecords(parseInt(iterator))
-    })
-      .catch((e) => {
+
+    const iterator = req.params.iterator
+    let response = null;
+
+    if (!iterator.match(/^[0-9]{1,10}$/)) {
+      logger.warn('List iteratotr must be a reasonably-sized positive integer')
+      response = { message: { error: 'Iterator must be a reasonably-sized positive integer' },
+                   statusCode: 400 }
+    } else {
+      try {
+        response = await server.listSubdomainRecords(parseInt(iterator))
+      } catch (e) {
         logger.error(e)
-        return { message: { error: 'Error processing request',
-                            status: false },
-                 statusCode: 400 }
-      })
-      .then((response) => {
-        res.writeHead(response.statusCode, HEADERS)
-        res.write(JSON.stringify(response.message))
-        res.end()
-      })
+        response = { message: { error: 'Error processing request',
+                                status: false },
+                     statusCode: 400 }
+      }
+    }
+
+    res.writeHead(response.statusCode, HEADERS)
+    res.write(JSON.stringify(response.message))
+    res.end()
   })
 
   const zonefileDelay = Math.min(2147483647,

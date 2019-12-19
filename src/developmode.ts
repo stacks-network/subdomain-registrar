@@ -13,7 +13,7 @@ function pExec(cmd) {
         if (err) {
           reject(err)
         } else {
-          resolve(stdout, stderr)
+          resolve([stdout, stderr])
         }
       })
     })
@@ -27,8 +27,8 @@ export function configureRegtest() {
   }
 }
 
-export function initializeBlockstackCore(forceRestart: ?Boolean = false,
-                                         dockerTag: ?String = null) {
+export function initializeBlockstackCore(forceRestart: boolean | undefined = false,
+                                         dockerTag: string | null | undefined = null) {
   if (!dockerTag) {
     dockerTag = 'blockstack-regtester'
   }

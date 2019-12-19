@@ -2,7 +2,7 @@ import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'b
 
 import logger from 'winston'
 
-export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
+export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
   try {
     const nameInfo = await bskConfig.network.getNameInfo(fullyQualifiedAddress)
     return (nameInfo.status === 'registered_subdomain')
@@ -28,8 +28,8 @@ export function checkProofs(owner, zonefile) {
 }
 
 export async function isRegistrationValid(
-  subdomainName: String, domainName: String,
-  owner: String, sequenceNumber: Number, checkCore: boolean) {
+  subdomainName: string, domainName: string,
+  owner: string, sequenceNumber: number, checkCore: boolean) {
   // currently, only support *new* subdomains
   if (sequenceNumber !== 0) {
     logger.debug(`seqn: ${sequenceNumber} failed validation`)
