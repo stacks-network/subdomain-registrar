@@ -61,7 +61,7 @@ const configDefaults = {
   checkCoreOnBatching: true,
   nameMinLength: 1,
   prometheus: { start: false, port: 0 },
-  minBatchSize: 1,
+  minBatchSize: 1
 }
 
 
