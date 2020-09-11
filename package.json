@@ -11,7 +11,7 @@
     "blockstack": "^17.2.0",
     "cors": "^2.8.4",
     "express": "^4.16.2",
-    "node-fetch": "^2.0.0",
+    "node-fetch": "^2.6.1",
     "prom-client": "^11.5.3",
     "ripemd160": "^2.0.1",
     "sqlite3": "^4.1.0",
