@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import winston  from 'winston'
+import winston from 'winston'
 
 import { initializeBlockstackCore, configureRegtest } from './developmode'
 import { makeHTTPServer } from './http'
@@ -11,11 +11,11 @@ const config = getConfig()
 winston.configure(config.winstonConfig)
 
 let initializationPromise = makeHTTPServer(config)
-    .catch((err) => {
-      winston.error(err)
-      winston.error(err.stack)
-      throw err
-    })
+  .catch((err) => {
+    winston.error(err)
+    winston.error(err.stack)
+    throw err
+  })
 
 if (config.regtest) {
   configureRegtest()
@@ -37,6 +37,6 @@ if (config.development) {
 initializationPromise
   .then((server) => {
     server.listen(config.port, () => {
-      console.log('Subdomain registrar started')
+      console.log('Subdomain registrar started on', config.port)
     })
   })

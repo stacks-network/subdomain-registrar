@@ -1,11 +1,21 @@
 import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'blockstack'
+import { validateStacksAddress } from '@stacks/transactions'
+import fetch from 'node-fetch'
 
 import logger from 'winston'
 
 export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
+
   try {
-    const nameInfo = await bskConfig.network.getNameInfo(fullyQualifiedAddress)
-    return (nameInfo.status === 'registered_subdomain')
+    const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + fullyQualifiedAddress
+    const nameInfoRequest = await fetch(nameInfoUrl)
+    const { status } = nameInfoRequest
+    const nameInfo = await nameInfoRequest.json()
+    if (status == 200) {
+      return (nameInfo.status === 'registered_subdomain')
+    } else {
+      return false
+    }
   } catch (err) {
     if (err.message === 'Name not found') {
       return false
@@ -35,12 +45,13 @@ export async function isRegistrationValid(
     logger.debug(`seqn: ${sequenceNumber} failed validation`)
     return false
   }
-  // owner should be a bitcoin address
-  const btcRegex = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/
-  if (!btcRegex.test(owner)) {
+
+  // owner should be a stacks address
+  if (!validateStacksAddress(owner)) {
     logger.debug(`owner: ${owner} failed validation`)
     return false
   }
+
   // subdomain name should be a legal name
   const subdomainRegex = /^[a-z0-9\-_+]{1,37}$/
   if (!subdomainRegex.test(subdomainName)) {

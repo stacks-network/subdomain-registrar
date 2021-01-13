@@ -44,8 +44,10 @@ export function makeHTTPServer(config) {
   app.get('/index', (req, res) => {
     res.writeHead(200, HEADERS)
     res.write(JSON.stringify(
-      { status: true,
-        domainName: config.domainName }))
+      {
+        status: true,
+        domainName: config.domainName
+      }))
     res.end()
   })
 
@@ -54,8 +56,10 @@ export function makeHTTPServer(config) {
     if (!requestJSON) {
       res.writeHead(400, HEADERS)
       res.write(JSON.stringify(
-        { status: false,
-          message: 'Failed to parse your registration request: expected JSON' }))
+        {
+          status: false,
+          message: 'Failed to parse your registration request: expected JSON'
+        }))
       res.end()
       return
     }
@@ -66,22 +70,24 @@ export function makeHTTPServer(config) {
     const authorization = req.headers.authorization || ''
 
     server.queueRegistration(requestJSON.name,
-                             requestJSON.owner_address,
-                             0,
-                             requestJSON.zonefile,
-                             ipAddress,
-                             authorization)
+      requestJSON.owner_address,
+      0,
+      requestJSON.zonefile,
+      ipAddress,
+      authorization)
       .then(() => {
         res.writeHead(202, HEADERS)
         res.write(JSON.stringify(
-          { status: true,
+          {
+            status: true,
             message: 'Your subdomain registration was received, and will '
-            + 'be included in the blockchain soon.' }))
+              + 'be included in the blockchain soon.'
+          }))
         res.end()
       })
       .catch((err) => {
         logger.error(err)
-        let message = 'Failed to validate your registration request.'
+        let message = 'Failed to validate your registration request. ' + err.message
         let code = 409
         if (err.message.startsWith('Proof')) {
           message = err.message
@@ -91,8 +97,10 @@ export function makeHTTPServer(config) {
         }
         res.writeHead(code, HEADERS)
         res.write(JSON.stringify(
-          { status: false,
-            message }))
+          {
+            status: false,
+            message
+          }))
         res.end()
       })
   })
@@ -102,8 +110,10 @@ export function makeHTTPServer(config) {
     if (!authHeader || authHeader !== `bearer ${config.adminPassword}`) {
       res.writeHead(401, HEADERS)
       res.write(JSON.stringify(
-        { status: false,
-          message: 'Unauthorized' }))
+        {
+          status: false,
+          message: 'Unauthorized'
+        }))
       res.end()
     } else {
       server.submitBatch()
@@ -123,8 +133,10 @@ export function makeHTTPServer(config) {
     if (!authHeader || authHeader !== `bearer ${config.adminPassword}`) {
       res.writeHead(401, HEADERS)
       res.write(JSON.stringify(
-        { status: false,
-          message: 'Unauthorized' }))
+        {
+          status: false,
+          message: 'Unauthorized'
+        }))
       res.end()
     } else {
       server.checkZonefiles()
@@ -153,8 +165,10 @@ export function makeHTTPServer(config) {
       .catch(() => {
         res.writeHead(501, HEADERS)
         res.write(JSON.stringify(
-          { status: false,
-            message: 'There was an error processing your request.' }))
+          {
+            status: false,
+            message: 'There was an error processing your request.'
+          }))
         res.end()
       })
   })
@@ -163,9 +177,13 @@ export function makeHTTPServer(config) {
     server.getSubdomainInfo(req.params.fullyQualified)
       .catch(error => {
         logger.error(error)
-        return { message: { error: 'Error processing request',
-                            status: false },
-                 statusCode: 400 }
+        return {
+          message: {
+            error: 'Error processing request',
+            status: false
+          },
+          statusCode: 400
+        }
       })
       .then(infoResponse => {
         res.writeHead(infoResponse.statusCode, HEADERS)
@@ -181,16 +199,22 @@ export function makeHTTPServer(config) {
       const iterator = req.params.iterator
       if (!iterator.match(/^[0-9]{1,10}$/)) {
         logger.warn('List iteratotr must be a reasonably-sized positive integer')
-        return { message: { error: 'Iterator must be a reasonably-sized positive integer' },
-                 statusCode: 400 }
+        return {
+          message: { error: 'Iterator must be a reasonably-sized positive integer' },
+          statusCode: 400
+        }
       }
       return server.listSubdomainRecords(parseInt(iterator))
     })
       .catch((e) => {
         logger.error(e)
-        return { message: { error: 'Error processing request',
-                            status: false },
-                 statusCode: 400 }
+        return {
+          message: {
+            error: 'Error processing request',
+            status: false
+          },
+          statusCode: 400
+        }
       })
       .then((response) => {
         res.writeHead(response.statusCode, HEADERS)
@@ -200,9 +224,9 @@ export function makeHTTPServer(config) {
   })
 
   const zonefileDelay = Math.min(2147483647,
-                                 Math.floor(60000 * config.checkTransactionPeriod))
+    Math.floor(60000 * config.checkTransactionPeriod))
   const batchDelay = Math.min(2147483647,
-                              Math.floor(60000 * config.batchDelayPeriod))
+    Math.floor(60000 * config.batchDelayPeriod))
 
   return server.initializeServer()
     .then(() => {
