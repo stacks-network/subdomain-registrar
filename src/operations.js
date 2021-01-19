@@ -135,7 +135,7 @@ async function nameUpdate(
   attachment: string,
   pkey: string,
   network
-): string {
+) {
   const txOptions = {
     contractAddress: deployedTo,
     contractName: deployedName,
@@ -181,7 +181,7 @@ export async function submitUpdate(
   const name = deconstruct[0]
   const namespace = deconstruct[1]
 
-  const txHex = await nameUpdate(
+  const txHex = nameUpdate(
     namespace,
     name,
     zonefile,
@@ -197,7 +197,7 @@ export async function submitUpdate(
 
   try {
     const result = await fetch(
-      bskConfig.network.coreApiUrl + bskConfig.network.broadcastEndpoint,
+      bskConfig.network.getBroadcastApiUrl(),
       {
         method: 'post',
         body: JSON.stringify(body),
@@ -207,13 +207,13 @@ export async function submitUpdate(
     const txHash = await result.json()
     return txHash
   } catch (err) {
-    throw new Error("Error post transaction: " + err.message)
+    throw new Error('Error post transaction: ' + err.message)
   }
 }
 
 export async function updateGlobalBlockHeight(): Promise<void> {
   try {
-    const httpRequest = await fetch('http://localhost:3999/v2/info')
+    const httpRequest = await fetch(bskConfig.network.getInfoUrl())
     const { status } = httpRequest
     const response = await httpRequest.json()
     if (status == 200) {
@@ -271,8 +271,6 @@ export async function checkTransactions(
         )
         const httpRequest = await fetch(url)
         const txInfo = await httpRequest.json()
-        console.log('tx info', txInfo)
-        console.log('zone file', tx.zonefile)
 
         if (!txInfo.block_height) {
           logger.info('Could not get block_height, probably unconfirmed.', {
@@ -310,8 +308,7 @@ export async function checkTransactions(
               blockHeight: tx.blockHeight
             }
           } else {
-            console.log('TODO: broadcast Zonefile', tx.zonefile)
-            // await broadcastZonefile(tx.zonefile)
+            // await broadcastZonefile(tx.zonefile) //todo 
             return {
               txHash: tx.txHash,
               status: true,
