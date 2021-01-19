@@ -101,13 +101,23 @@ function dbAll(db: sqlite3.Database, cmd: string, args?: Array<Object>): Promise
 }
 
 
+function isInMemory(dbPath: string) {
+  return dbPath.includes(':memory:')
+}
+
 export class RegistrarQueueDB {
   dbLocation: string
   db: sqlite3.Database
 
-  constructor(dbLocation: string) { // eslint-disable-line
-    const dbPath = path.resolve(__dirname, 'subdomain_registrar.db')
-    this.dbLocation = dbPath
+  constructor(dbLocation: string) {
+
+    if (isInMemory(dbLocation)) {
+      this.dbLocation = dbLocation
+    } else {
+
+      const dbPath = path.resolve(__dirname, dbLocation)
+      this.dbLocation = dbPath
+    }
   }
 
   initialize(): Promise<void> {

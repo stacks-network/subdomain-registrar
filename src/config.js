@@ -4,12 +4,12 @@ import fs from 'fs'
 
 const configDevelopDefaults = {
   winstonConsoleTransport: {
-      level: 'info',
-      handleExceptions: false,
-      timestamp: true,
-      stringify: true,
-      colorize: true,
-      json: false
+    level: 'info',
+    handleExceptions: false,
+    timestamp: true,
+    stringify: true,
+    colorize: true,
+    json: false
   },
   domainName: DEVELOP_DOMAIN,
   ownerKey: OWNER_SK,
@@ -34,12 +34,12 @@ const configDevelopDefaults = {
 
 const configDefaults = {
   winstonConsoleTransport: {
-      level: 'info',
-      handleExceptions: false,
-      timestamp: true,
-      stringify: true,
-      colorize: true,
-      json: false
+    level: 'info',
+    handleExceptions: false,
+    timestamp: true,
+    stringify: true,
+    colorize: true,
+    json: false
   },
   domainName: null,
   ownerKey: null,
@@ -49,7 +49,7 @@ const configDefaults = {
   // check if zonefiles can be broadcasted every 5 minutes
   checkTransactionPeriod: 5,
   zonefileSize: 40960,
-  dbLocation: '/root/subdomain_registrar.db',
+  dbLocation: 'subdomain_registrar.db',
   adminPassword: 'NEEDS-A-PASSWORD',
   domainUri: 'https://registrar.whatever.com',
   resolverUri: false,
@@ -89,9 +89,11 @@ export function getConfig() {
     config.prometheus = { start: true, port: parseInt(process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) }
   }
 
-  config.winstonConfig = { transports: [
-    new winston.transports.Console(config.winstonConsoleTransport)
-  ] }
+  config.winstonConfig = {
+    transports: [
+      new winston.transports.Console(config.winstonConsoleTransport)
+    ]
+  }
 
   return config
 }

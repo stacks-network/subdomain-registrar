@@ -2,7 +2,7 @@
   "ownerKey": "3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601",
   "paymentKey": "3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601",
   "domainUri": "https://gaia.blockstack.org/hub/1M3325hr1utdv4HhSAfvYKhapzPP9Axhde/profile.json",
-  "dbLocation": "/root/subdomain_registrar.db",
+  "dbLocation": "subdomain_registrar.db",
   "domainName": "test.id",
   "adminPassword": "ADMIN-PASSWORD",
   "port": 3000,
