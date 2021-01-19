@@ -1,25 +1,29 @@
 import test from 'tape'
 import nock from 'nock'
 
-import { destructZonefile, subdomainOpToZFPieces, checkTransactions,
-         submitUpdate, makeUpdateZonefile } from '../../lib/operations'
+import {
+  destructZonefile, subdomainOpToZFPieces, checkTransactions,
+  submitUpdate, makeUpdateZonefile
+} from '../../lib/operations'
 import { parseZoneFile } from 'zone-file'
+const bns = require('./../bns.json')
 
-const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
-const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
+// const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
+const testAddress = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'
+const testSK = 'b8d99fd45da58038d630d9855d3ca2466e8e0f89d3894c4724f0efc9ff4b51f001'
 
-const testAddress2 = '1xME6Dp5boMe4xDxAJn1Gaat7d3k5hhdE'
-const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6db01'
+const testAddress2 = 'ST26FVX16539KKXZKJN098Q08HRX3XBAP541MFS0P'
+const testSK2 = '3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601'
 
 export function unitTestOperations() {
   test('destructing a zonefile', (t) => {
     t.plan(8)
 
-    let zfs = [Array(310).fill('1').join(''),
-               Array(374).fill('1').join(''),
-               Array(10).fill('1').join(''),
-               Array(500).fill('1').join('')]
-    let destructs = zfs.map(
+    const zfs = [Array(310).fill('1').join(''),
+    Array(374).fill('1').join(''),
+    Array(10).fill('1').join(''),
+    Array(500).fill('1').join('')]
+    const destructs = zfs.map(
       x => destructZonefile(x))
 
     t.equal(destructs[0].length, 2)
@@ -34,16 +38,19 @@ export function unitTestOperations() {
 
   test('subdomainOpToZFPieces', (t) => {
     t.plan(4)
-    let opSkeleton = {
+    const opSkeleton = {
       subdomainName: 'foo',
       owner: testAddress,
-      seqn: 0}
-    let ops = [
+      seqn: 0
+    }
+    const ops = [
       { zonefile: Array(10).fill('1').join('') },
-      { zonefile: Array(310).fill('1').join(''),
-        signature: 'foo-bar' }]
-        .map(x => Object.assign({}, x, opSkeleton))
-    let zfRecs = ops.map( x => subdomainOpToZFPieces(x) )
+      {
+        zonefile: Array(310).fill('1').join(''),
+        signature: 'foo-bar'
+      }]
+      .map(x => Object.assign({}, x, opSkeleton))
+    const zfRecs = ops.map(x => subdomainOpToZFPieces(x))
 
     t.ok(zfRecs[0].name)
     t.ok(zfRecs[1].name)
@@ -57,143 +64,138 @@ export function unitTestOperations() {
     t.plan(1)
 
     nock.cleanAll()
-    nock('https://bitcoinfees.earn.com')
-      .get('/api/v1/fees/recommended')
-      .reply(200, {fastestFee: 10})
-
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 1,
-                       confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
-      
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 2,
-                       confirmations: 100,
-                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
-
-    nock('https://blockchain.info')
-      .persist()
-      .post('/pushtx?cors=true')
-      .reply(200, 'transaction Submitted')
-
-    nock('https://core.blockstack.org')
-      .get('/v1/info')
-      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
-                    "first_block": 373601, 
-                    "indexing": false, 
-                    "last_block_processed": 606362, 
-                    "last_block_seen": 606368, 
-                    "server_alive": true, 
-                    "server_version": "21.0.0.0", 
-                    "testnet": false, 
-                    "zonefile_count": 106499 })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/bar.id')
-      .reply(200, { address: '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq' })
+      .reply(200, {
+        address: testAddress
+      })
+
+    nock('https://core.blockstack.org')
+      .post('/v2/transactions')
+      .reply(200, '"tx-hash"')
+
+    nock('https://core.blockstack.org')
+      .get('/v2/contracts/interface/ST000000000000000000002AMW42H/bns')
+      .reply(200, bns)
+
+    nock('https://core.blockstack.org')
+      .get('/v2/fees/transfer')
+      .reply(200, 1)
+
+
+
+    nock('https://core.blockstack.org')
+      .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
+      .reply(200, {
+        balance: '0x00000000000000000000000000000000',
+        locked: '0x00000000000000000000000000000000',
+        unlock_height: 0,
+        nonce: 0,
+        balance_proof: '',
+        nonce_proof: ''
+      })
 
     submitUpdate('bar.id', 'hello world',
-                 testSK, testSK2)
-      .then(x => t.equal(x, '8b85c2b7c7b1d67fbf2a8617bb56c30f8f7f4ae022e6bb4106143c58cc272c22'))
+      testSK, testSK2)
+      .then(x => t.equal(x, 'tx-hash'))
   })
 
   test('checkTransactions', async (t) => {
     t.plan(1)
 
-    let txs = [{hash: 'txhash-0', height: 289},
-               {hash: 'txhash-1', height: 293},
-               {hash: 'txhash-2', height: 294},
-               {hash: 'txhash-3', height: undefined }]
-        .map(x => ({ zonefile: 'hello world',
-                     txHash: x.hash,
-                     blockheight: x.height }))
+    const txs = [{ hash: 'txhash-0', height: 289 },
+    { hash: 'txhash-1', height: 293 },
+    { hash: 'txhash-2', height: 294 },
+    { hash: 'txhash-3', height: undefined }]
+      .map(x => ({
+        zonefile: 'hello world',
+        txHash: x.hash,
+        blockheight: x.height
+      }))
 
     nock.cleanAll()
 
-    nock('https://node.blockstack.org:6263')
-      .persist()
-      .post('/RPC2')
-      .reply(200, '<string>{"saved": [1]}</string>')
-
-    nock('https://blockchain.info')
-      .persist()
-      .get('/latestblock?cors=true')
-      .reply(200, { height: 300 })
-
-    txs.forEach( x => nock('https://blockchain.info')
-                 .persist()
-                 .get(`/rawtx/${x.txHash}?cors=true`)
-                 .reply(200, { block_height: x.blockheight }) )
-
     nock('https://core.blockstack.org')
+      .get('/v2/info')
+      .reply(200, { burn_block_height: 300 })
+
+    txs.forEach(x => nock('https://core.blockstack.org')
       .persist()
-      .post('/v1/zonefile/')
-      .reply(202, { servers: ['me.co'] })
+      .get(`/extended/v1/tx/${x.txHash}`)
+      .reply(200, { block_height: x.blockheight }))
+
+    // nock('https://core.blockstack.org')
+    //   .persist()
+    //   .post('/v1/zonefile/')
+    //   .reply(202, { servers: ['me.co'] })  //todo v1/zonefile commented for now 
 
     const results = await checkTransactions(txs)
-    t.deepEqual( results,
-                 [ { txHash: 'txhash-0',
-                     status: true, blockHeight: 289 },
-                   { txHash: 'txhash-1',
-                     status: true, blockHeight: 293 },
-                   { txHash: 'txhash-2',
-                     status: false, blockHeight: 294 },
-                   { txHash: 'txhash-3',
-                     status: false, blockHeight: -1 } ] )
+    t.deepEqual(results,
+      [{
+        txHash: 'txhash-0',
+        status: true, blockHeight: 289
+      },
+      {
+        txHash: 'txhash-1',
+        status: true, blockHeight: 293
+      },
+      {
+        txHash: 'txhash-2',
+        status: false, blockHeight: 294
+      },
+      {
+        txHash: 'txhash-3',
+        status: false, blockHeight: -1
+      }])
   })
 
   test('makeUpdateZonefile', (t) => {
     t.plan(5)
 
-    let uriEntry = [{name: 'bar.id', target: 'bar.com',
-                     priority: 1, weight: 10}]
-    let maxZonefileBytes = 1000
+    const uriEntry = [{
+      name: 'bar.id', target: 'bar.com',
+      priority: 1, weight: 10
+    }]
+    const maxZonefileBytes = 1000
 
-    let subdomainName = 'foo'
+    const subdomainName = 'foo'
 
-    let subdomainOp = {
+    const subdomainOp = {
       owner: testAddress,
       seqn: 0,
       zonefile: 'hello world'
     }
 
-    let updatesArray1 = [ Object.assign({}, subdomainOp,
-                                        { subdomainName: `${subdomainName}-0` }) ]
-    let updatesArray2 = []
+    const updatesArray1 = [Object.assign({}, subdomainOp,
+      { subdomainName: `${subdomainName}-0` })]
+    const updatesArray2 = []
     for (let i = 0; i < 20; i++) {
       updatesArray2.push(
         Object.assign({}, subdomainOp,
-                      { subdomainName: `${subdomainName}-${i}` }))
+          { subdomainName: `${subdomainName}-${i}` }))
     }
 
-    let update1 = makeUpdateZonefile('bar.id', uriEntry,
-                                     updatesArray1, maxZonefileBytes)
-    let update2 = makeUpdateZonefile('bar.id', uriEntry,
-                                     updatesArray2, maxZonefileBytes)
+    const update1 = makeUpdateZonefile('bar.id', uriEntry,
+      updatesArray1, maxZonefileBytes)
+    const update2 = makeUpdateZonefile('bar.id', uriEntry,
+      updatesArray2, maxZonefileBytes)
 
     t.deepEqual(update1.submitted, ['foo-0'], 'expect only 1 submission')
-    t.deepEqual(update2.submitted, [0,1,2,3,4,5,6,7].map(x => `${subdomainName}-${x}`),
-                'expect fewer submitted than the whole set')
+    t.deepEqual(update2.submitted, [0, 1, 2, 3, 4, 5, 6, 7].map(x => `${subdomainName}-${x}`),
+      'expect fewer submitted than the whole set')
 
     t.ok(Buffer.from(update2.zonefile, 'ascii').length < 1000,
-         'outputedd zonefile should be less than 1k bytes')
+      'outputedd zonefile should be less than 1k bytes')
 
-    let parsed1 = parseZoneFile(update1.zonefile)
-    let parsed2 = parseZoneFile(update2.zonefile)
+    const parsed1 = parseZoneFile(update1.zonefile)
+    const parsed2 = parseZoneFile(update2.zonefile)
 
     t.deepEqual(parsed1.txt.map(rec => rec.name), ['foo-0'],
-                'outputted txt records should match expected subdomains')
+      'outputted txt records should match expected subdomains')
     t.deepEqual(parsed2.txt.map(rec => rec.name),
-                [0,1,2,3,4,5,6,7].map(x => `${subdomainName}-${x}`),
-                'outputted txt records should match expected subdomains')
+      [0, 1, 2, 3, 4, 5, 6, 7].map(x => `${subdomainName}-${x}`),
+      'outputted txt records should match expected subdomains')
 
   })
 

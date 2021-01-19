@@ -2,13 +2,13 @@ import test from 'tape'
 import nock from 'nock'
 
 import { SubdomainServer } from '../../lib/server'
+const bns = require('./../bns.json')
 
-const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
-const testAddress2 = '1xME6Dp5boMe4xDxAJn1Gaat7d3k5hhdE'
-const testAddress3 = '1LmH1r8K62yZEjBtpbwU94yT3jLhLMiR1M'
-const testAddress4 = '13ZX7DVLQjrjXisJ1PKqywv3LVaztS6AFd'
-const testSK = 'c14b3044ca7f31fc68d8fcced6b60effd350c280e7aa5c4384c6ef32c0cb129f01'
-const testSK2 = '849bef09aa15c0e87ab55237fa4e45a0a6dfc0a7c698c9a8b6d193e1c1fae6db01'
+const testAddress = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'
+const testAddress2 = 'ST26FVX16539KKXZKJN098Q08HRX3XBAP541MFS0P'
+const testAddress3 = 'ST3CECAKJ4BH08JYY7W53MC81BYDT4YDA5M7S5F53'
+const testSK = 'b8d99fd45da58038d630d9855d3ca2466e8e0f89d3894c4724f0efc9ff4b51f001'
+const testSK2 = '3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601'
 
 function dbRun(db: Object, cmd: String, args?: Array) {
   if (!args) {
@@ -25,26 +25,27 @@ function dbRun(db: Object, cmd: String, args?: Array) {
   })
 }
 
+
+
 export function testSubdomainServer() {
 
   test('queueRegistration', (t) => {
     t.plan(26)
     nock.cleanAll()
 
-    nock('https://blockchain.info')
-      .persist()
-      .get('/latestblock?cors=true')
-      .reply(200, { height: 300 })
+    nock('https://core.blockstack.org')
+      .get('/v2/info')
+      .reply(200, { burn_block_height: 300 })
 
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/foo.bar.id')
-      .reply(200, { status: 'registered_subdomain'})
+      .reply(200, { status: 'registered_subdomain' })
 
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/bar.bar.id')
-      .reply(404, {})
+      .reply(200, {})
 
     nock('https://core.blockstack.org')
       .persist()
@@ -74,108 +75,113 @@ export function testSubdomainServer() {
       .get('/v1/names/ipwhitelisted2.bar.id')
       .reply(404, {})
 
-    let s = new SubdomainServer({ domainName: 'bar.id',
-                                  ownerKey: testSK,
-                                  paymentKey: testSK,
-                                  dbLocation: ':memory:',
-                                  domainUri: 'http://myfreewebsite.com',
-                                  ipLimit: 1,
-                                  ipWhitelist: ['whitelisted-ip-addr'],
-                                  proofsRequired: 0,
-                                  checkCoreOnBatching: true,
-                                  apiKeys: ['abcdefghijk'],
-                                  zonefileSize: 4096,
-                                  nameMinLength: 3})
+    const s = new SubdomainServer({
+      domainName: 'bar.id',
+      ownerKey: testSK,
+      paymentKey: testSK,
+      dbLocation: ':memory:',
+      domainUri: 'http://myfreewebsite.com',
+      ipLimit: 1,
+      ipWhitelist: ['whitelisted-ip-addr'],
+      proofsRequired: 0,
+      checkCoreOnBatching: true,
+      apiKeys: ['abcdefghijk'],
+      zonefileSize: 4096,
+      nameMinLength: 3
+    })
     s.initializeServer()
       .then(
         () =>
           s.queueRegistration('foo', testAddress, 0, 'hello-world', 'foo')
-          .then(() => t.ok(false, 'foo.foo.id should not be a valid id to queue'))
-          .catch((err) => {
-            t.equal(err.message,
-                    'Requested subdomain operation is invalid.') }))
+            .then(() => t.ok(false, 'foo.foo.id should not be a valid id to queue'))
+            .catch((err) => {
+              t.equal(err.message,
+                'Requested subdomain operation is invalid.')
+            }))
       .then(
         () =>
           s.queueRegistration('bar', 'm123', 0, 'hello-world', 'bar')
-          .then(() => t.ok(false, 'should not queue with a bad address'))
-          .catch((err) => t.equal(err.message, 'Requested subdomain operation is invalid.',
-                                  'should not queue with a bad address')))
+            .then(() => t.ok(false, 'should not queue with a bad address'))
+            .catch((err) => t.equal(err.message, 'Requested subdomain operation is invalid.',
+              'should not queue with a bad address')))
       .then(
         () =>
           s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
-          .then(() => t.ok(true, 'should queue bar.bar.id'))
-          .catch((err) => {
-            console.log(err)
-            console.log(err.stack)
-            t.ok(false, 'should be able to queue bar.bar.id') }))
+            .then(() => t.ok(true, 'should queue bar.bar.id'))
+            .catch((err) => {
+              console.log(err)
+              console.log(err.stack)
+              t.ok(false, 'should be able to queue bar.bar.id')
+            }))
       .then(
         () =>
           s.queueRegistration('ba', testAddress2, 0, 'hello-world', 'foo')
-          .then(() => t.ok(false, 'should not queue ba.bar.id because ba is too short'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(true, 'should not be able to queue ba.bar.id') }))
+            .then(() => t.ok(false, 'should not queue ba.bar.id because ba is too short'))
+            .catch((err) => {
+              console.log(err.stack)
+              t.ok(true, 'should not be able to queue ba.bar.id')
+            }))
       .then(
         () =>
           s.queueRegistration('car', testAddress, 0, 'hello-world', 'foo')
-          .then(() => t.ok(false, 'should not queue with a reused owner address'))
-          .catch((err) => t.ok(err.message.startsWith('Owner', 'should not queue with same owner address'))))
+            .then(() => t.ok(false, 'should not queue with a reused owner address'))
+            .catch((err) => t.ok(err.message.startsWith('Owner', 'should not queue with same owner address'))))
       .then(
         () =>
           s.queueRegistration('car', testAddress2, 0, 'hello-world', 'foo')
-          .then(() => t.ok(false, 'should not queue with a reused ip address'))
-          .catch((err) => t.ok(err.message.startsWith('IP', 'should not queue with same IP address'))))
+            .then(() => t.ok(false, 'should not queue with a reused ip address'))
+            .catch((err) => t.ok(err.message.startsWith('IP', 'should not queue with same IP address'))))
       .then(
         () =>
           s.spamCheck('car', testAddress2, 'hello-world', 'foo', 'bearer abcdefghijk')
-          .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
+            .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
       .then(
         () =>
           s.getSubdomainStatus('bar')
-          .then((x) =>
-                t.ok(x.status.startsWith('Subdomain is queued for update'), 'bar.bar.id should be queued')))
+            .then((x) =>
+              t.ok(x.status.startsWith('Subdomain is queued for update'), 'bar.bar.id should be queued')))
       .then(
         () =>
           s.updateQueueStatus(['bar'], 'txhash'))
       .then(
         () =>
           s.getSubdomainStatus('bar')
-          .then((x) =>
-                t.ok(x.status.startsWith('Your subdomain was registered in transaction'),
-                     `status should update, but was still: ${x.status}`)))
+            .then((x) =>
+              t.ok(x.status.startsWith('Your subdomain was registered in transaction'),
+                `status should update, but was still: ${x.status}`)))
       .then(
         () =>
           s.getSubdomainStatus('foo')
-          .then((x) =>
-                t.ok(x.status.startsWith('Subdomain propagated', 'foo.bar.id should be queued'))))
+            .then((x) =>
+              t.ok(x.status.startsWith('Subdomain propagated', 'foo.bar.id should be queued'))))
       .then(
         () =>
           s.getSubdomainStatus('tar')
-          .then((x) =>
-                t.ok(x.status.startsWith('Subdomain not registered', 'tar.bar.id should not be queued'))))
+            .then((x) =>
+              t.ok(x.status.startsWith('Subdomain not registered', 'tar.bar.id should not be queued'))))
       .then(
         () =>
           s.getSubdomainInfo('bar.bar.id')
-          .then(resp =>
-                {
-                  t.equal(resp.message.status, 'submitted_subdomain')
-                  t.equal(resp.message.address, testAddress)
-                  t.equal(resp.message.last_txid, 'txhash')
-                }))
+            .then(resp => {
+              t.equal(resp.message.status, 'submitted_subdomain')
+              t.equal(resp.message.address, testAddress)
+              t.equal(resp.message.last_txid, 'txhash')
+            }))
       .then(
         () =>
           s.getSubdomainInfo('tar.bar.id')
-          .then(resp => t.equal(resp.statusCode, 404)))
+            .then(resp => t.equal(resp.statusCode, 404)))
       .then(
         () =>
           s.getSubdomainInfo('ba.bar.id')
-          .then(resp => t.equal(resp.statusCode, 400)))
+            .then(resp => t.equal(resp.statusCode, 400)))
       .then(
         () => {
           // insert a dummy stale one.
           const time = 500
           const dbCmd = 'INSERT INTO subdomain_queue ' +
-                '(subdomainName, owner, sequenceNumber, zonefile, status, received_ts)' +
-                ' VALUES (?, ?, ?, ?, ?, DATETIME(?, "unixepoch"))'
+            '(subdomainName, owner, sequenceNumber, zonefile, status, received_ts)' +
+            ' VALUES (?, ?, ?, ?, ?, DATETIME(?, "unixepoch"))'
           const dbArgs = ['shouldNotList', 'whatever', '54', 'zone', 'received', time]
 
           return dbRun(s.db.db, dbCmd, dbArgs)
@@ -183,44 +189,50 @@ export function testSubdomainServer() {
       .then(
         () =>
           s.listSubdomainRecords(0)
-          .then(response => {
-            const listing = response.message
-            t.equal(listing.length, 1, 'Should list 1 subdomain')
-            t.equal(listing[0].name, 'bar.bar.id', 'Should have bar in listing')
-            t.equal(listing[0].address, testAddress, 'Should have bar owned by the right addr')
-            t.equal(listing[0].sequence, 0, 'should have 0 sequence number')
-            t.equal(listing[0].zonefile, 'hello-world', 'should have correct zonefile')
-            t.equal(listing[0].status, 'submitted', 'should have correct status')
-          }))
+            .then(response => {
+              const listing = response.message
+              t.equal(listing.length, 1, 'Should list 1 subdomain')
+              t.equal(listing[0].name, 'bar.bar.id', 'Should have bar in listing')
+              t.equal(listing[0].address, testAddress, 'Should have bar owned by the right addr')
+              t.equal(listing[0].sequence, 0, 'should have 0 sequence number')
+              t.equal(listing[0].zonefile, 'hello-world', 'should have correct zonefile')
+              t.equal(listing[0].status, 'submitted', 'should have correct status')
+            }))
       .then(
         () =>
           // past the iterator.
           s.listSubdomainRecords(parseInt(2))
-          .then(listing => listing.message)
-          .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains')))
+            .then(listing => listing.message)
+            .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains')))
       .then(
         () =>
-          s.queueRegistration('ipwhitelisted0', '1HcfvNyox5GuPiPKbkPjg9cAADC76gMhMR',
-                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
-          .then(() => t.ok(true, 'should queue first whitelisted address'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(false, 'should be able to queue') }))
+          s.queueRegistration('ipwhitelisted0', 'ST31HHVBKYCYQQJ5AQ25ZHA6W2A548ZADDQ6S16GP',
+            0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+            .then(() => t.ok(true, 'should queue first whitelisted address'))
+            .catch((err) => {
+              console.log(err.stack)
+              t.ok(false, 'should be able to queue')
+            }))
       .then(
         () =>
-          s.queueRegistration('ipwhitelisted1', '12VTJa2i13CMf1mj5SCHZG5EwZ7ArwNTSb',
-                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
-          .then(() => t.ok(true, 'should queue 2nd whitelisted address'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(false, 'should be able to queue') }))
+          s.queueRegistration('ipwhitelisted1', 'ST15RR51GKMB5A52GP5XRT1KT9B42M7NF2VHYS96F',
+            0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+            .then(() => t.ok(true, 'should queue 2nd whitelisted address'))
+            .catch((err) => {
+              console.log(err.stack)
+              t.ok(false, 'should be able to queue')
+            }))
       .then(
         () =>
-          s.queueRegistration('ipwhitelisted2', '16AWWF4UC9u6DQUthLsCDoEv89f9M5iVZe',
-                              0, 'hello-world-zonefile', 'whitelisted-ip-addr')
-          .then(() => t.ok(true, 'should queue 3rd whitelisted address'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(false, 'should be able to queue') }))
+          s.queueRegistration('ipwhitelisted2', 'ST6HQACZN5HN9RNK57PK4MH84GT3EV9FW5A6MA6G',
+            0, 'hello-world-zonefile', 'whitelisted-ip-addr')
+            .then(() => t.ok(true, 'should queue 3rd whitelisted address'))
+            .catch((err) => {
+              console.log(err.stack)
+              t.ok(false, 'should be able to queue')
+            }))
 
-      .catch( (err) => { console.log(err.stack) } )
+      .catch((err) => { console.log(err.stack) })
   })
 
   test('apiKeyOnly', (t) => {
@@ -232,34 +244,38 @@ export function testSubdomainServer() {
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
-    nock('https://blockchain.info')
+    nock('https://core.blockstack.org')
       .persist()
-      .get('/latestblock?cors=true')
-      .reply(200, { height: 300 })
+      .get('/v2/info')
+      .reply(200, { burn_block_height: 300 })
 
-    let s = new SubdomainServer({ domainName: 'bar.id',
-                                  ownerKey: testSK,
-                                  paymentKey: testSK,
-                                  dbLocation: ':memory:',
-                                  domainUri: 'http://myfreewebsite.com',
-                                  ipLimit: 1,
-                                  proofsRequired: 0,
-                                  disableRegistrationsWithoutKey: true,
-                                  checkCoreOnBatching: true,
-                                  apiKeys: ['abcdefghijk'],
-                                  zonefileSize: 4096 })
+    const s = new SubdomainServer({
+      domainName: 'bar.id',
+      ownerKey: testSK,
+      paymentKey: testSK,
+      dbLocation: ':memory:',
+      domainUri: 'http://myfreewebsite.com',
+      ipLimit: 1,
+      proofsRequired: 0,
+      disableRegistrationsWithoutKey: true,
+      checkCoreOnBatching: true,
+      apiKeys: ['abcdefghijk'],
+      zonefileSize: 4096
+    })
     s.initializeServer()
       .then(
         () =>
           s.queueRegistration('bar', testAddress, 0, 'hello-world', 'foo')
-          .then(() => t.ok(false, 'should not queue bar.bar.id'))
-          .catch((err) => { console.log(err.stack)
-                            t.ok(true, 'should not be able to queue bar.bar.id') }))
+            .then(() => t.ok(false, 'should not queue bar.bar.id'))
+            .catch((err) => {
+              console.log(err.stack)
+              t.ok(true, 'should not be able to queue bar.bar.id')
+            }))
       .then(
         () =>
-          s.spamCheck('bar', testAddress, 'hello-world', 'foo', 'bearer abcdefghijk')
-          .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
-    })
+          s.spamCheck('bar', testAddress2, 'hello-world', 'foo', 'bearer abcdefghijk')
+            .then((res) => t.notOk(res, 'should pass spam check when using authorization bearer token')))
+  })
 
   test('submitBatch', async (t) => {
     t.plan(10)
@@ -268,7 +284,7 @@ export function testSubdomainServer() {
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/bar.id')
-      .reply(200, { address: '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq' })
+      .reply(200, { address: testAddress })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
@@ -280,50 +296,22 @@ export function testSubdomainServer() {
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
+    nock('https://core.blockstack.org')
+      .get('/v2/info')
+      .reply(200, { burn_block_height: 300 })
 
-    nock('https://bitcoinfees.earn.com')
-      .persist()
-      .get('/api/v1/fees/recommended')
-      .reply(200, {fastestFee: 10})
-
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 1,
-                       confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
-
-    nock('https://blockchain.info')
-      .get('/latestblock?cors=true')
-      .times(2)
-      .reply(200, { height: 300 })
-
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 2,
-                       confirmations: 100,
-                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
-
-    nock('https://blockchain.info')
-      .persist()
-      .post('/pushtx?cors=true')
-      .reply(200, 'transaction Submitted')
-
-    let s = new SubdomainServer({ domainName: 'bar.id',
-                                  ownerKey: testSK,
-                                  paymentKey: testSK2,
-                                  dbLocation: ':memory:',
-                                  ipLimit: 0,
-                                  checkCoreOnBatching: true,
-                                  proofsRequired: 0,
-                                  zonefileSize: 4096,
-                                  minBatchSize: 2,
-                                  domainUri: 'http://myfreewebsite.com' })
+    const s = new SubdomainServer({
+      domainName: 'bar.id',
+      ownerKey: testSK,
+      paymentKey: testSK2,
+      dbLocation: ':memory:',
+      ipLimit: 0,
+      checkCoreOnBatching: true,
+      proofsRequired: 0,
+      zonefileSize: 4096,
+      minBatchSize: 2,
+      domainUri: 'http://myfreewebsite.com'
+    })
     await s.initializeServer()
     let resp = await s.submitBatch()
     t.equal(resp, null, 'should skip submission of an empty batch')
@@ -341,7 +329,11 @@ export function testSubdomainServer() {
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
       .times(1)
-      .reply(200, { status: 'registered_subdomain'})
+      .reply(200, { status: 'registered_subdomain' })
+
+    nock('https://core.blockstack.org')
+      .post('/v2/transactions')
+      .reply(200, '"ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f"')
 
 
     const acquiredWait = s.lock.acquire('queue', () => {
@@ -351,84 +343,71 @@ export function testSubdomainServer() {
     })
 
     const failureBatch = s.submitBatch()
-          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-          .catch((err) => {
-            t.equal(err.message, 'Failed to obtain lock')
-          })
+      .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+      .catch((err) => {
+        t.equal(err.message, 'Failed to obtain lock')
+      })
     await Promise.all([acquiredWait, failureBatch])
 
     nock('https://core.blockstack.org')
-      .get('/v1/info')
-      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
-                    "first_block": 373601,
-                    "indexing": false,
-                    // Try a STALE info return
-                    "last_block_processed": 10,
-                    "last_block_seen": 606368,
-                    "server_alive": true,
-                    "server_version": "21.0.0.0",
-                    "testnet": false,
-                    "zonefile_count": 106499 })
-
-    try {
-      await s.submitBatch()
-      t.fail('Should have failed to submit a stale batch')
-    } catch {
-      t.pass('Should not have submitted a batch')
-    }
+      .get('/v2/contracts/interface/ST000000000000000000002AMW42H/bns')
+      .reply(200, bns)
 
     nock('https://core.blockstack.org')
-      .get('/v1/info')
-      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
-                    "first_block": 373601,
-                    "indexing": false,
-                    // Try a STALE info return
-                    "last_block_processed": 606360,
-                    "last_block_seen": 606368,
-                    "server_alive": true,
-                    "server_version": "21.0.0.0",
-                    "testnet": false,
-                    "zonefile_count": 106499 })
+      .get('/v2/fees/transfer')
+      .reply(200, 1)
 
-    let b = await s.submitBatch()
+    nock('https://core.blockstack.org')
+      .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
+      .reply(200, {
+        balance: '0x00000000000000000000000000000000',
+        locked: '0x00000000000000000000000000000000',
+        unlock_height: 0,
+        nonce: 0,
+        balance_proof: '',
+        nonce_proof: ''
+      })
+
+    nock('https://core.blockstack.org')
+      .get('/v1/names/foo.bar.id')
+      .times(1)
+      .reply(400, { status: 'registered_subdomain' })
+
+    const b = await s.submitBatch()
     const expected_tx = 'ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f'
     t.equal(b, expected_tx)
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
       .times(1)
-      .reply(404, { status: 'registered_subdomain'})
+      .reply(404, { status: 'registered_subdomain' })
+
 
     let x = await s.getSubdomainStatus('bar')
     t.ok(x.status.startsWith('Your subdomain was registered in transaction'),
-         `status should update, but was still: ${x.status}`)
+      `status should update, but was still: ${x.status}`)
     x = await s.getSubdomainStatus('foo')
     t.ok(x.status.startsWith('Subdomain is queued'),
-         `foo.bar.id should still be queued for update, was: ${x.status}`)
+      `foo.bar.id should still be queued for update, was: ${x.status}`)
 
-    nock('https://blockchain.info')
-      .get(`/rawtx/${expected_tx}?cors=true`)
+    nock('https://core.blockstack.org')
+      .get('/v2/info')
       .times(1)
-      .reply(200, { block_height: 300 })
-
-    await s.checkZonefiles()
-
-    t.equal((await s.db.getTrackedTransactions()).length, 1, 'Should still be tracking 1 transaction')
-
-    nock('https://blockchain.info')
-      .get('/latestblock?cors=true')
-      .times(1)
-      .reply(200, { height: 310 })
-
-    nock('https://node.blockstack.org:6263')
-      .persist()
-      .post('/RPC2')
-      .reply(200, '<string>{"saved": [1]}</string>')
+      .reply(200, { burn_block_height: 300 })
 
     nock('https://core.blockstack.org')
       .persist()
-      .post('/v1/zonefile/')
-      .reply(202, { servers: ['me.co'] })
+      .get(`/extended/v1/tx/${expected_tx}`)
+      .reply(200, { block_height: 300 })
+
+    await s.checkZonefiles() //todo
+
+    t.equal((await s.db.getTrackedTransactions()).length, 1, 'Should still be tracking 1 transaction')
+
+    nock('https://core.blockstack.org')
+      .get('/v2/info')
+      .times(1)
+      .reply(200, { burn_block_height: 310 })
 
     await s.checkZonefiles()
 
@@ -438,20 +417,21 @@ export function testSubdomainServer() {
   test('shutdown', async (t) => {
     t.plan(1)
 
-    nock('https://blockchain.info')
-      .persist()
-      .get('/latestblock?cors=true')
-      .reply(200, { height: 300 })
+    nock('https://core.blockstack.org')
+      .get('/v2/info')
+      .reply(200, { burn_block_height: 300 })
 
-    let s = new SubdomainServer({ domainName: 'bar.id',
-                                  ownerKey: testSK,
-                                  paymentKey: testSK2,
-                                  dbLocation: ':memory:',
-                                  zonefileSize: 4096,
-                                  checkCoreOnBatching: true,
-                                  ipLimit: 0,
-                                  proofsRequired: 0,
-                                  domainUri: 'http://myfreewebsite.com' })
+    const s = new SubdomainServer({
+      domainName: 'bar.id',
+      ownerKey: testSK,
+      paymentKey: testSK2,
+      dbLocation: ':memory:',
+      zonefileSize: 4096,
+      checkCoreOnBatching: true,
+      ipLimit: 0,
+      proofsRequired: 0,
+      domainUri: 'http://myfreewebsite.com'
+    })
     await s.initializeServer()
     try {
       await s.shutdown()
@@ -466,15 +446,15 @@ export function testSubdomainServer() {
     t.plan(12)
     nock.cleanAll()
 
-    nock('https://blockchain.info')
+    nock('https://core.blockstack.org')
       .persist()
-      .get('/latestblock?cors=true')
+      .get('/v2/info')
       .reply(200, { height: 300 })
 
     nock('https://core.blockstack.org')
       .persist()
       .get('/v1/names/bar.id')
-      .reply(200, { address: '16LToaDSxQaar4LBbdgQpq2vn2FbFMcpuP' })
+      .reply(200, { address: 'ST30ZKFVB3NYTA5RWPFGK9MJ6XZDRQ5SY3QDY51RD' })
 
     nock('https://core.blockstack.org')
       .persist()
@@ -497,59 +477,21 @@ export function testSubdomainServer() {
       .reply(404, {})
 
 
-    nock('https://bitcoinfees.earn.com')
-      .get('/api/v1/fees/recommended')
-      .reply(200, {fastestFee: 10})
-
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 1,
-                       confirmations: 100,
-                       tx_hash_big_endian: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688' }]})
-
-    nock('https://blockchain.info')
-      .persist()
-      .get(`/unspent?format=json&active=${testAddress2}&cors=true`)
-      .reply(200, {unspent_outputs:
-                   [ { value: 10000,
-                       tx_output_n: 2,
-                       confirmations: 100,
-                       tx_hash_big_endian: 'c6c3f4d5d94ae7cd980645316c02ea725b77a91121a707faac34ffdd540fd67d' }]})
-
-    nock('https://blockchain.info')
-      .persist()
-      .post('/pushtx?cors=true')
-      .reply(200, 'transaction Submitted')
-
-    nock('https://core.blockstack.org')
-      .get('/v1/info')
-      .reply(200, { consensus: 'dfe87cfd31ffa2a3b8101e3e93096f2b',
-                    "first_block": 373601,
-                    "indexing": false,
-                    "last_block_processed": 606362,
-                    "last_block_seen": 606368,
-                    "server_alive": true,
-                    "server_version": "21.0.0.0",
-                    "testnet": false,
-                    "zonefile_count": 106499 })
-
-
-    let s = new SubdomainServer({ domainName: 'bar.id',
-                                  ownerKey: testSK,
-                                  paymentKey: testSK2,
-                                  dbLocation: ':memory:',
-                                  zonefileSize: 4096,
-                                  nameMinLength: 3,
-                                  checkCoreOnBatching: true,
-                                  ipLimit: 0,
-                                  proofsRequired: 0,
-                                  domainUri: 'http://myfreewebsite.com' })
+    const s = new SubdomainServer({
+      domainName: 'bar.id',
+      ownerKey: testSK,
+      paymentKey: testSK2,
+      dbLocation: ':memory:',
+      zonefileSize: 4096,
+      nameMinLength: 3,
+      checkCoreOnBatching: true,
+      ipLimit: 0,
+      proofsRequired: 0,
+      domainUri: 'http://myfreewebsite.com'
+    })
 
     await s.initializeServer()
-    let resp = await s.submitBatch()
+    const resp = await s.submitBatch()
     t.equal(resp, null, 'should skip submission of an empty batch')
     try {
       await s.queueRegistration('fo', testAddress, 0, 'hello-world')
@@ -576,16 +518,16 @@ export function testSubdomainServer() {
     })
 
     const failureBatch = s.submitBatch()
-          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-          .catch((err) => {
-            t.equal(err.message, 'Failed to obtain lock')
-          })
+      .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+      .catch((err) => {
+        t.equal(err.message, 'Failed to obtain lock')
+      })
 
     const failureCheck = s.checkZonefiles()
-          .then(() => t.ok(false, 'Shouldnt have gotten lock'))
-          .catch((err) => {
-            t.equal(err.message, 'Failed to obtain lock')
-          })
+      .then(() => t.ok(false, 'Shouldnt have gotten lock'))
+      .catch((err) => {
+        t.equal(err.message, 'Failed to obtain lock')
+      })
 
     await Promise.all([acquiredWait, failureBatch, failureCheck])
 
@@ -622,16 +564,16 @@ export function testSubdomainServer() {
 
     let x = await s.getSubdomainStatus('bar')
     t.ok(x.status.startsWith('Subdomain is queued'),
-         `bar.bar.id should still be queued for update`)
+      `bar.bar.id should still be queued for update`)
     x = await s.getSubdomainStatus('foo')
     t.ok(x.status.startsWith('Subdomain is queued'),
-         `foo.bar.id should still be queued for update`)
+      `foo.bar.id should still be queued for update`)
 
     // now, let's try to _force_ the subdomain registrar into a failure state
     //  which _used_ to be possible, but now isn't due to the locking isSubdomainInQueue check.
 
     s.isSubdomainInQueue = async () => { return false };
-    s.spamCheck = async() => { return false };
+    s.spamCheck = async () => { return false };
 
     try {
       await s.queueRegistration('alice', testAddress3, 0, 'hello-world')
