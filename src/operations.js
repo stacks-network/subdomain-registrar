@@ -143,7 +143,7 @@ async function nameUpdate(
     functionArgs: [
       bufferCVFromString(namespace),
       bufferCVFromString(name),
-      bufferCV(hash160(Buffer.from(attachment, 'hex')))
+      bufferCV(hash160(Buffer.from(attachment)))
     ],
     senderKey: pkey,
     validateWithAbi: true,
@@ -165,6 +165,12 @@ export async function submitUpdate(
     ownerKey,
     TransactionVersion.Testnet
   )
+
+  const deconstruct = domainName.split('.')
+  if (deconstruct.length != 2) {
+    throw new Error('Invalid domain name')
+  }
+
   const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + domainName
   const nameInfoRequest = await fetch(nameInfoUrl)
   const nameInfo = await nameInfoRequest.json()
@@ -174,14 +180,11 @@ export async function submitUpdate(
       `Domain name ${domainName} not owned by address ${ownerAddress}`
     )
   } // owner validated
-  const deconstruct = domainName.split('.')
-  if (deconstruct.length != 2) {
-    throw new Error('Invalid domain name')
-  }
+
   const name = deconstruct[0]
   const namespace = deconstruct[1]
 
-  const txHex = nameUpdate(
+  const txHex = await nameUpdate(
     namespace,
     name,
     zonefile,
