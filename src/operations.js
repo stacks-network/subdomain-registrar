@@ -163,7 +163,7 @@ export async function submitUpdate(
 ) {
   const ownerAddress = getAddressFromPrivateKey(
     ownerKey,
-    TransactionVersion.Testnet
+    TransactionVersion.Mainnet
   )
 
   const deconstruct = domainName.split('.')

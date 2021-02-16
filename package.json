@@ -17,7 +17,7 @@
     "node-fetch": "^2.0.0",
     "prom-client": "^11.5.3",
     "ripemd160": "^2.0.1",
-    "sqlite3": "^4.1.0",
+    "sqlite3": "^5.0.2",
     "winston": "^2.4.0",
     "zone-file": "^0.2.3"
   },
@@ -30,6 +30,7 @@
     "@istanbuljs/nyc-config-babel": "^2.1.1",
     "babel-eslint": "^10.0.3",
     "babel-plugin-istanbul": "^5.2.0",
+    "dotenv": "^8.2.0",
     "eslint": "^6.7.1",
     "flow-bin": "^0.109.0",
     "nock": "^9.1.6",

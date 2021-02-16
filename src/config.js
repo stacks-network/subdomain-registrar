@@ -72,7 +72,12 @@ export function getConfig() {
     config.development = true
   }
   if (process.env.BSK_SUBDOMAIN_REGTEST) {
-    config = Object.assign({}, configDevelopDefaults)
+    config = Object.assign({}, {
+      ...configDevelopDefaults,
+      domainName: process.env.OWNER_NAME || configDevelopDefaults.DEVELOP_DOMAIN,
+      ownerKey: process.env.OWNER_KEY || configDevelopDefaults.OWNER_SK,
+      paymentKey: process.env.PAYMENT_KEY || configDevelopDefaults.PAYER_SK
+    })
   }
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
     const configFile = process.env.BSK_SUBDOMAIN_CONFIG

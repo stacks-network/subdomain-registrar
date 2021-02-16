@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import winston from 'winston'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 import { initializeBlockstackCore, configureRegtest } from './developmode'
 import { makeHTTPServer } from './http'

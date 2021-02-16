@@ -190,3 +190,12 @@ $ curl http://localhost:3000/index | jq
   "status": true
 }
 ```
+
+## Configuration with ENV variables
+
+The following ENV variables can be set to override settings.
+
+- `PAYMENT_KEY` - The private key used to pay for the transactions
+- `OWNER_KEY` - The private key that owns the BNS name
+- `OWNER_NAME` - The BNS name used to register subdomains, i.e. `foo.id`
+- `BLOCKSTACK_API_URL` - A Stacks blockchain API url
