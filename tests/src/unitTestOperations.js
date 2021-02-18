@@ -9,7 +9,7 @@ import { parseZoneFile } from 'zone-file'
 const bns = require('./../bns.json')
 
 // const testAddress = '1HnssYWq9L39JMmD7tgtW8QbJfZQGhgjnq'
-const testAddress = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'
+const testAddress = 'SP2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7GB36ZAR0'
 const testSK = 'b8d99fd45da58038d630d9855d3ca2466e8e0f89d3894c4724f0efc9ff4b51f001'
 
 const testAddress2 = 'ST26FVX16539KKXZKJN098Q08HRX3XBAP541MFS0P'
