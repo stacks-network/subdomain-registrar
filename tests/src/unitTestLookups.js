@@ -2,7 +2,7 @@ import { isSubdomainRegistered, isRegistrationValid, validlySignedUpdate } from 
 import test from 'tape'
 import nock from 'nock'
 
-const testAddress = '15xt7ureTvUxuvwLY6nBV1wg73mmSHG8qk'
+const testAddress = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH'
 
 export function unitTestLookups() {
 
@@ -13,14 +13,14 @@ export function unitTestLookups() {
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .reply(200, { status: 'registered_subdomain'})
+      .reply(200, { status: 'registered_subdomain' })
 
     isSubdomainRegistered('foo.bar.id')
       .then(x => t.ok(x))
       .catch(() => t.ok(false))
   })
 
-  test('lookup if a subdomain is registered', (t) => {
+  test('lookup if a subdomain is not registered', (t) => {
     t.plan(1)
 
     nock.cleanAll()
@@ -66,7 +66,7 @@ export function unitTestLookups() {
     nock.cleanAll()
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
-      .reply(200, { status: 'registered_subdomain'})
+      .reply(200, { status: 'registered_subdomain' })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/bar.bar.id')

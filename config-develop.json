@@ -1,9 +1,9 @@
 {
-  "ownerKey": "YOUR-OWNER-KEY",
-  "paymentKey": "YOUR-PAYMENT-KEY",
+  "ownerKey": "3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601",
+  "paymentKey": "3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601",
   "domainUri": "https://gaia.blockstack.org/hub/1M3325hr1utdv4HhSAfvYKhapzPP9Axhde/profile.json",
   "dbLocation": "subdomain_registrar.db",
-  "domainName": "domain.id",
+  "domainName": "test.id",
   "adminPassword": "ADMIN-PASSWORD",
   "port": 3000,
   "disableRegistrationsWithoutKey": false,
@@ -17,5 +17,5 @@
     "colorize": true,
     "json": false
   },
-  "nameMinLength": 8
+  "nameMinLength": 4
 }
