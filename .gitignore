@@ -61,3 +61,4 @@ typings/
 data
 lib
 tests/lib
+.vscode

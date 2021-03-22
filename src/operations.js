@@ -12,8 +12,7 @@ import {
   bufferCV,
   bufferCVFromString,
   getAddressFromPrivateKey,
-  makeContractCall,
-  TransactionVersion
+  makeContractCall
 } from '@stacks/transactions'
 
 export type SubdomainOp = {
@@ -163,7 +162,7 @@ export async function submitUpdate(
 ) {
   const ownerAddress = getAddressFromPrivateKey(
     ownerKey,
-    TransactionVersion.Mainnet
+    bskConfig.network.version
   )
 
   const deconstruct = domainName.split('.')
