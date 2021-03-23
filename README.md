@@ -27,6 +27,14 @@ $ which blockstack-subdomain-registrar
 
 The subdomain registrar functions roughly as follows --- you give the registrar a _domain_ to register subdomains under, you fund a wallet to submit registrations with, it accepts registration requests, and then it periodically issues _batches_ of name registrations. 
 
+### Setting the Admin Password
+1. Set the `ADMIN_PASSWORD` environment var to strong password. 
+ex: 
+```bash
+$ pwgen -c 64 1
+raj5gohhai0ni3bah4chaa6keeCh4Oophongaikeichie2eirah8AjooyahZaifi
+```
+
 ### Setting the Domain Name
 
 For example, if I want to register names like `alice.people.id` or `bob.people.id`, I have to:
