@@ -1,4 +1,4 @@
-import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN } from './developmode'
+import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN, ADMIN_PASSWORD } from './developmode'
 import winston from 'winston'
 import fs from 'fs'
 
@@ -17,7 +17,7 @@ const configDevelopDefaults = {
   batchDelayPeriod: 0.5,
   checkTransactionPeriod: 0.1,
   dbLocation: '/tmp/subdomain_registrar.db',
-  adminPassword: 'tester129',
+  adminPassword: ADMIN_PASSWORD,
   domainUri: 'file:///tmp/whatever',
   resolverUri: 'http://localhost:3000',
   zonefileSize: 40960,
@@ -50,7 +50,7 @@ const configDefaults = {
   checkTransactionPeriod: 5,
   zonefileSize: 40960,
   dbLocation: 'subdomain_registrar.db',
-  adminPassword: 'NEEDS-A-PASSWORD',
+  adminPassword: null,
   domainUri: 'https://registrar.whatever.com',
   resolverUri: false,
   port: 3000,
@@ -89,7 +89,9 @@ export function getConfig() {
   if (process.env.BSK_SUBDOMAIN_OWNER_KEY) {
     config.ownerKey = process.env.BSK_SUBDOMAIN_OWNER_KEY
   }
-
+  if (process.env.ADMIN_PASSWORD) {
+    config.ownerKey = process.env.ADMIN_PASSWORD || configDevelopDefaults.ADMIN_PASSWORD
+  }
   if (process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) {
     config.prometheus = { start: true, port: parseInt(process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) }
   }

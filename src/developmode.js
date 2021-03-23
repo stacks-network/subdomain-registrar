@@ -6,6 +6,7 @@ import { StacksMocknet } from '@stacks/network'
 export const PAYER_SK = 'bb68eda988e768132bc6c7ca73a87fb9b0918e9a38d3618b74099be25f7cab7d01'
 export const OWNER_SK = '8f87d1ea26d03259371675ea3bd31231b67c5df0012c205c154764a124f5b8fe01'
 export const DEVELOP_DOMAIN = 'foo.id'
+export const ADMIN_PASSWORD = 'tester129'
 
 function pExec(cmd) {
   return new Promise(
