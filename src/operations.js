@@ -24,7 +24,6 @@ export type SubdomainOp = {
   signature: string,
 };
 
-const deployedTo = bskConfig.network.version === TransactionVersion.Mainnet ? 'SP000000000000000000002Q6VF78' : 'ST000000000000000000002AMW42H'
 const deployedName = 'bns'
 
 const ZONEFILE_TEMPLATE = '{$origin}\n{$ttl}\n{txt}{uri}'
@@ -136,6 +135,7 @@ async function nameUpdate(
   pkey: string,
   network
 ) {
+  const deployedTo = bskConfig.network.version === TransactionVersion.Mainnet ? 'SP000000000000000000002Q6VF78' : 'ST000000000000000000002AMW42H'
   const txOptions = {
     contractAddress: deployedTo,
     contractName: deployedName,
