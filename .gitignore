@@ -62,3 +62,4 @@ data
 lib
 tests/lib
 .vscode
+package-lock.json
