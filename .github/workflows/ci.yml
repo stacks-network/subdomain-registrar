@@ -2,9 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - '**'
-    tags:
-      - 'v*'
+      - 'master'
     paths-ignore:
       - '**/CHANGELOG.md'
       - '**/package.json'
