@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - 'master'
+    tags:
+      - '**'
     paths-ignore:
       - '**/CHANGELOG.md'
       - '**/package.json'
@@ -87,6 +89,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SEMANTIC_RELEASE_PACKAGE: ${{ github.event.repository.name }}
         with:
           extra_plugins: |
             @semantic-release/changelog
