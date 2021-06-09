@@ -3,8 +3,8 @@
 To install from source:
 
 ```bash
-$ git clone https://github.com/blockstack/subdomain-registrar.git
-$ npm i
+git clone https://github.com/blockstack/subdomain-registrar.git
+npm i
 ```
 
 # Starting up the registrar
@@ -18,8 +18,10 @@ BSK_SUBDOMAIN_CONFIG=/home/aaron/devel/subdomain-registrar/my-local-config.json 
 You can also install the subdomain registrar globally.  It should install as the program `blockstack-subdomain-registrar`.
 
 ```bash
-$ sudo npm i -g   # or, "sudo npm link"
-$ which blockstack-subdomain-registrar
+sudo npm i -g   # or, "sudo npm link"
+which blockstack-subdomain-registrar
+```
+```
 /usr/bin/blockstack-subdomain-registrar
 ```
 
@@ -31,7 +33,9 @@ The subdomain registrar functions roughly as follows --- you give the registrar 
 1. Set the `ADMIN_PASSWORD` environment var to strong password. 
 ex: 
 ```bash
-$ pwgen -c 64 1
+pwgen -c 64 1
+```
+```
 raj5gohhai0ni3bah4chaa6keeCh4Oophongaikeichie2eirah8AjooyahZaifi
 ```
 
@@ -138,25 +142,28 @@ Or by setting the environment variable `BSK_SUBDOMAIN_PROMETHEUS_PORT`
 Queue a registration:
 
 ```bash
-$ curl -X POST -H 'Authorization: bearer API-KEY-IF-USED' -H 'Content-Type: application/json' --data '{"zonefile": "$ORIGIN spqr\n$TTL 3600\n_https._tcp URI 10 1 \"https://gaia.blockstack.org/hub/1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi/profile.json\"\n", "name": "spqr", "owner_address": "1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi"}' http://localhost:3000/register/
+curl -X POST -H 'Authorization: bearer API-KEY-IF-USED' -H 'Content-Type: application/json' --data '{"zonefile": "$ORIGIN spqr\n$TTL 3600\n_https._tcp URI 10 1
+```
+```
+\"https://gaia.blockstack.org/hub/1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi/profile.json\"\n", "name": "spqr", "owner_address": "1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi"}' http://localhost:3000/register/
 ```
 
 Force a batch:
 
 ```bash
-$ curl http://localhost:3000/issue_batch -X POST -H 'Authorization: bearer PASSWORDHERE'
+curl http://localhost:3000/issue_batch -X POST -H 'Authorization: bearer PASSWORDHERE'
 ```
 
 Force zonefile check:
 
 ```bash
-$ curl http://localhost:3000/check_zonefile -X POST -H 'Authorization: bearer PASSWORDHERE'
+curl http://localhost:3000/check_zonefile -X POST -H 'Authorization: bearer PASSWORDHERE'
 ```
 
 Check subdomain status:
 
 ```bash
-$ curl http://localhost:3000/status/spqr | jq .
+curl http://localhost:3000/status/spqr | jq .
 
 {
   "status": "Your subdomain was registered in transaction 6652bd350f048cd190ff04a5f0cdebbc166b13f3fd0e1126eacec8c600c25c6f -- it should propagate on the network once it has 6 confirmations."
@@ -193,7 +200,9 @@ docker run -d -v data:/root/ -e BSK_SUBDOMAIN_CONFIG=/root/config.json -p 3000:3
 Root stores the sqlite database that the subdomain uses to queue registrations, and watch zonefiles for broadcasting. To test connectivity for this setup run the following curl command:
 
 ```bash
-$ curl http://localhost:3000/index | jq
+curl http://localhost:3000/index | jq
+```
+```
 {
   "status": true
 }
