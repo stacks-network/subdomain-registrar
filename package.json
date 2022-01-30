@@ -65,7 +65,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blockstack/subdomain-registrar.git"
+    "url": "git+https://github.com/stacks-network/subdomain-registrar.git"
   },
   "author": {
     "name": "Blockstack PBC",
@@ -79,9 +79,9 @@
     }
   ],
   "bugs": {
-    "url": "https://github.com/blockstack/subdomain-registrar/issues"
+    "url": "https://github.com/stacks-network/subdomain-registrar/issues"
   },
-  "homepage": "https://github.com/blockstack/subdomain-registrar#readme",
+  "homepage": "https://github.com/stacks-network/subdomain-registrar#readme",
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
