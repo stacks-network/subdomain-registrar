@@ -3,7 +3,7 @@
 To install from source:
 
 ```bash
-git clone https://github.com/blockstack/subdomain-registrar.git
+git clone https://github.com/stacks-network/subdomain-registrar.git
 npm i
 ```
 
@@ -71,7 +71,7 @@ of names registered by a given IP) and social proof verification.
 
 Social proof verification performs the normal
 Blockstack JWT verification and social proof checks, provided by
-[blockstack.js](https://github.com/blockstack/blockstack.js).
+[blockstack.js](https://github.com/stacks-network/blockstack.js).
 
 In order to support registration requests from "trusted sources", you can use the `apiKeys` configuration option
 to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
@@ -119,7 +119,7 @@ In most cases, you want to use the compressed key.
 
 ### Configuring Instantaneous Resolution
 
-Per the design outlined [here](https://github.com/blockstack/blockstack-core/issues/750), the subdomain
+Per the design outlined [here](https://github.com/stacks-network/blockstack-core/issues/750), the subdomain
 registrar can be configured so that blockstack indexer nodes will respond with HTTP 301 status codes
 for missing subdomains. The 301 redirect will send the name lookup request to a URI designated by
 the _domain_ name. In a standard setup, this would allow nearly _instantaneous_ resolution of subdomain
