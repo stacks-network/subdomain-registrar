@@ -1,5 +1,6 @@
-import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'blockstack'
+import { config as bskConfig, validateProofs } from 'blockstack'
 import { validateStacksAddress } from '@stacks/transactions'
+import { resolveZoneFileToProfile } from '@stacks/profile'
 import fetch from 'node-fetch'
 
 import logger from 'winston'
