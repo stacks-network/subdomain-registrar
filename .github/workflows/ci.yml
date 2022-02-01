@@ -56,7 +56,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v2
         with:
-          images: ${{ github.repository }}
+          images: blockstack/${{ github.event.repository.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
