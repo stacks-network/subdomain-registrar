@@ -7,6 +7,7 @@
     "@promster/express": "^3.2.0",
     "@promster/server": "^3.2.0",
     "@stacks/network": "^1.0.0-beta.20",
+    "@stacks/profile": "^3.1.0",
     "@stacks/transactions": "^1.0.0-beta.20",
     "async-lock": "^1.1.3",
     "bitcoinjs-lib": "^3.3.2",
