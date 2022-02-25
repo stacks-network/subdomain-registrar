@@ -22,17 +22,19 @@
     "zone-file": "^0.2.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.6.3",
+    "@babel/cli": "^7.17.6",
     "@babel/core": "^7.6.3",
     "@babel/preset-env": "^7.6.3",
     "@babel/preset-flow": "^7.0.0",
     "@babel/register": "^7.7.4",
+    "@stacks/prettier-config": "0.0.10",
     "@commitlint/cli": "^12.1.1",
     "@commitlint/config-conventional": "^12.1.1",
     "@istanbuljs/nyc-config-babel": "^2.1.1",
     "babel-eslint": "^10.0.3",
     "babel-plugin-istanbul": "^5.2.0",
     "dotenv": "^8.2.0",
+    "prettier": "2.2.1",
     "eslint": "^6.7.1",
     "flow-bin": "^0.109.0",
     "husky": "^6.0.0",
@@ -43,6 +45,7 @@
   "bin": {
     "blockstack-subdomain-registrar": "lib/index.js"
   },
+  "prettier": "@stacks/prettier-config",
   "scripts": {
     "start": "npm run build && node lib/index.js",
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
@@ -50,6 +53,7 @@
     "flow": "flow",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "lint:prettier": "prettier --check src/**/*.{js,json}",
     "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",
     "test-inner": "npm run compile-tests && node tests/lib/index.js",
     "test": "nyc --reporter=text npm run test-inner",

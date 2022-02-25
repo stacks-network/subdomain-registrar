@@ -9,37 +9,44 @@ npm i
 
 # Starting up the registrar
 
-You can run the registrar in place from its source directory, and you can specify your config file via the `BSK_SUBDOMAIN_CONFIG` environment parameter. 
+You can run the registrar in place from its source directory, and you can specify your config file via the `BSK_SUBDOMAIN_CONFIG` environment parameter.
 
 ```bash
 BSK_SUBDOMAIN_CONFIG=/home/aaron/devel/subdomain-registrar/my-local-config.json npm run start
 ```
 
-You can also install the subdomain registrar globally.  It should install as the program `blockstack-subdomain-registrar`.
+You can also install the subdomain registrar globally. It should install as the program `blockstack-subdomain-registrar`.
 
 To do so run this script in your terminal :
+
 ```bash
 sudo npm i -g   # or, "sudo npm link"
 which blockstack-subdomain-registrar
 ```
-You should receive the following output : 
+
+You should receive the following output :
+
 ```
 /usr/bin/blockstack-subdomain-registrar
 ```
 
 # Basic Operation
 
-The subdomain registrar functions roughly as follows --- you give the registrar a _domain_ to register subdomains under, you fund a wallet to submit registrations with, it accepts registration requests, and then it periodically issues _batches_ of name registrations. 
+The subdomain registrar functions roughly as follows --- you give the registrar a _domain_ to register subdomains under, you fund a wallet to submit registrations with, it accepts registration requests, and then it periodically issues _batches_ of name registrations.
 
 ### Setting the Admin Password
-1. Set the `ADMIN_PASSWORD` environment var to strong password. 
-ex: 
 
-Run this command in your terminal : 
+1. Set the `ADMIN_PASSWORD` environment var to strong password.
+   ex:
+
+Run this command in your terminal :
+
 ```bash
 pwgen -c 64 1
 ```
-You should receive very similar output to this : 
+
+You should receive very similar output to this :
+
 ```
 raj5gohhai0ni3bah4chaa6keeCh4Oophongaikeichie2eirah8AjooyahZaifi
 ```
@@ -95,7 +102,6 @@ You can either store your private key hexes in your config.json, or pass them
 in via environment variables `BSK_SUBDOMAIN_OWNER_KEY` and `BSK_SUBDOMAIN_PAYMENT_KEY`,
 and then clear those after the process starts.
 
-
 ### Private Key Formatting
 
 A common issue when configuring the subdomain registrar relates to private key formatting. A bare private key hex string is 64-characters (corresponding to a 32-byte ECDSA private key), for example:
@@ -107,6 +113,7 @@ A common issue when configuring the subdomain registrar relates to private key f
 Now -- this key actually corresponds to two different bitcoin addresses -- a [compressed and an uncomprossed address](https://bitcoin.org/en/glossary/compressed-public-key). Most bitcoin addresses in use (and the kind used by the Blockstack Browser) are compressed. The standard way to denote that the corresponding public-key should be compressed is by appending `01` to the private key: this results in a 66-character hex string private key.
 
 For example, these are the two different addresses for the above key:
+
 ```
 var bsk = require('blockstack')
 bsk.hexStringToECPair('9bffeccf649d21814ce6a605ad5cb1bdf1ac9ee44c53ef08a292af82875154df01').getAddress()
@@ -123,7 +130,7 @@ Per the design outlined [here](https://github.com/stacks-network/blockstack-core
 registrar can be configured so that blockstack indexer nodes will respond with HTTP 301 status codes
 for missing subdomains. The 301 redirect will send the name lookup request to a URI designated by
 the _domain_ name. In a standard setup, this would allow nearly _instantaneous_ resolution of subdomain
-names. (*Note:* these names will not have been committed to the blockchain yet, and therefore the response
+names. (_Note:_ these names will not have been committed to the blockchain yet, and therefore the response
 from the designated endpoint _do not_ have the same security properties as committed names).
 
 To support this, the subdomain registrar is capable of responding to `/v1/names/foo.bar.id` style requests,
@@ -143,7 +150,6 @@ Or by setting the environment variable `BSK_SUBDOMAIN_PROMETHEUS_PORT`
 
 # Sample Curl Scripts
 
-
 Queue a registration:
 
 Run this command in your terminal :
@@ -151,7 +157,9 @@ Run this command in your terminal :
 ```bash
 curl -X POST -H 'Authorization: bearer API-KEY-IF-USED' -H 'Content-Type: application/json' --data '{"zonefile": "$ORIGIN spqr\n$TTL 3600\n_https._tcp URI 10 1
 ```
-You should receive similar to the following output : 
+
+You should receive similar to the following output :
+
 ```
 \"https://gaia.blockstack.org/hub/1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi/profile.json\"\n", "name": "spqr", "owner_address": "1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi"}' http://localhost:3000/register/
 ```
@@ -170,11 +178,14 @@ curl http://localhost:3000/check_zonefile -X POST -H 'Authorization: bearer PASS
 
 Check subdomain status:
 
-Run this command in your terminal : 
+Run this command in your terminal :
+
 ```bash
 curl http://localhost:3000/status/spqr | jq .
 ```
-You should receive the following output : 
+
+You should receive the following output :
+
 ```
 {
   "status": "Your subdomain was registered in transaction 6652bd350f048cd190ff04a5f0cdebbc166b13f3fd0e1126eacec8c600c25c6f -- it should propagate on the network once it has 6 confirmations."
@@ -195,7 +206,7 @@ vi config.json
 Once that is done you can spin up the instance using docker-compose. The file will build the image as well:
 
 ```bash
-docker-compose up -d 
+docker-compose up -d
 ```
 
 If you would like to run w/o compose you can do the same with docker:
@@ -210,11 +221,14 @@ docker run -d -v data:/root/ -e BSK_SUBDOMAIN_CONFIG=/root/config.json -p 3000:3
 
 Root stores the sqlite database that the subdomain uses to queue registrations, and watch zonefiles for broadcasting. To test connectivity for this setup run the following curl command:
 
-Run this command in your terminal : 
+Run this command in your terminal :
+
 ```bash
 curl http://localhost:3000/index | jq
 ```
-You should receive the following output : 
+
+You should receive the following output :
+
 ```
 {
   "status": true

@@ -41,7 +41,7 @@ jobs:
         run: npm run report-lcov
 
       - name: Upload to codecov
-        uses: codecov/codecov-action@v1        
+        uses: codecov/codecov-action@v1
 
   build-publish:
     runs-on: ubuntu-latest

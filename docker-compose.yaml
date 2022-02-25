@@ -6,6 +6,6 @@ services:
     volumes:
       - ./data:/root
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      BSK_SUBDOMAIN_CONFIG: "/root/config.json"
+      BSK_SUBDOMAIN_CONFIG: '/root/config.json'
