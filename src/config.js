@@ -1,8 +1,8 @@
-import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN, ADMIN_PASSWORD } from './developmode'
-import winston from 'winston'
-import fs from 'fs'
+import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN, ADMIN_PASSWORD } from './developmode';
+import winston from 'winston';
+import fs from 'fs';
 
-const adminPassword = process.env.ADMIN_PASSWORD || ADMIN_PASSWORD
+const adminPassword = process.env.ADMIN_PASSWORD || ADMIN_PASSWORD;
 
 const configDevelopDefaults = {
   winstonConsoleTransport: {
@@ -11,7 +11,7 @@ const configDevelopDefaults = {
     timestamp: true,
     stringify: true,
     colorize: true,
-    json: false
+    json: false,
   },
   domainName: DEVELOP_DOMAIN,
   ownerKey: OWNER_SK,
@@ -31,8 +31,8 @@ const configDevelopDefaults = {
   proofsRequired: 0,
   disableRegistrationsWithoutKey: false,
   checkCoreOnBatching: true,
-  prometheus: { start: false, port: 0 }
-}
+  prometheus: { start: false, port: 0 },
+};
 
 const configDefaults = {
   winstonConsoleTransport: {
@@ -41,7 +41,7 @@ const configDefaults = {
     timestamp: true,
     stringify: true,
     colorize: true,
-    json: false
+    json: false,
   },
   domainName: null,
   ownerKey: null,
@@ -63,43 +63,43 @@ const configDefaults = {
   checkCoreOnBatching: true,
   nameMinLength: 1,
   prometheus: { start: false, port: 0 },
-  minBatchSize: 1
-}
-
+  minBatchSize: 1,
+};
 
 export function getConfig() {
-  let config = Object.assign({}, configDefaults)
+  let config = Object.assign({}, configDefaults);
   if (process.env.BSK_SUBDOMAIN_DEVELOP) {
-    config = Object.assign({}, configDevelopDefaults)
-    config.development = true
+    config = Object.assign({}, configDevelopDefaults);
+    config.development = true;
   }
   if (process.env.BSK_SUBDOMAIN_REGTEST) {
-    config = Object.assign({}, {
-      ...configDevelopDefaults,
-      domainName: process.env.OWNER_NAME || configDevelopDefaults.DEVELOP_DOMAIN,
-      ownerKey: process.env.OWNER_KEY || configDevelopDefaults.OWNER_SK,
-      paymentKey: process.env.PAYMENT_KEY || configDevelopDefaults.PAYER_SK
-    })
+    config = Object.assign(
+      {},
+      {
+        ...configDevelopDefaults,
+        domainName: process.env.OWNER_NAME || configDevelopDefaults.DEVELOP_DOMAIN,
+        ownerKey: process.env.OWNER_KEY || configDevelopDefaults.OWNER_SK,
+        paymentKey: process.env.PAYMENT_KEY || configDevelopDefaults.PAYER_SK,
+      }
+    );
   }
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
-    const configFile = process.env.BSK_SUBDOMAIN_CONFIG
-    Object.assign(config, JSON.parse(fs.readFileSync(configFile)))
+    const configFile = process.env.BSK_SUBDOMAIN_CONFIG;
+    Object.assign(config, JSON.parse(fs.readFileSync(configFile)));
   }
   if (process.env.BSK_SUBDOMAIN_PAYMENT_KEY) {
-    config.paymentKey = process.env.BSK_SUBDOMAIN_PAYMENT_KEY
+    config.paymentKey = process.env.BSK_SUBDOMAIN_PAYMENT_KEY;
   }
   if (process.env.BSK_SUBDOMAIN_OWNER_KEY) {
-    config.ownerKey = process.env.BSK_SUBDOMAIN_OWNER_KEY
+    config.ownerKey = process.env.BSK_SUBDOMAIN_OWNER_KEY;
   }
   if (process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) {
-    config.prometheus = { start: true, port: parseInt(process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) }
+    config.prometheus = { start: true, port: parseInt(process.env.BSK_SUBDOMAIN_PROMETHEUS_PORT) };
   }
 
   config.winstonConfig = {
-    transports: [
-      new winston.transports.Console(config.winstonConsoleTransport)
-    ]
-  }
+    transports: [new winston.transports.Console(config.winstonConsoleTransport)],
+  };
 
-  return config
+  return config;
 }
