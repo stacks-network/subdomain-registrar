@@ -2,7 +2,9 @@
 .*/node_modules/documentation/*
 .*/node_modules/.staging/*
 .*/node_modules/npm/*
-
+.*/node_modules/eslint-import-resolver-node/node_modules*
+.*/node_modules/eslint-import-resolver-typescript/node_modules*
+.*/node_modules/eslint-plugin-import/node_modules*
 [include]
 
 [libs]

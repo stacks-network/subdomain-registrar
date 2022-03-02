@@ -23,22 +23,26 @@
   },
   "devDependencies": {
     "@babel/cli": "^7.6.3",
-    "@babel/core": "^7.6.3",
+    "@babel/core": "^7.17.5",
+    "@babel/eslint-parser": "^7.17.0",
     "@babel/preset-env": "^7.6.3",
     "@babel/preset-flow": "^7.0.0",
     "@babel/register": "^7.7.4",
     "@commitlint/cli": "^12.1.1",
     "@commitlint/config-conventional": "^12.1.1",
     "@istanbuljs/nyc-config-babel": "^2.1.1",
+    "@stacks/eslint-config": "^1.2.0",
     "babel-eslint": "^10.0.3",
     "babel-plugin-istanbul": "^5.2.0",
     "dotenv": "^8.2.0",
     "eslint": "^6.7.1",
+    "eslint-plugin-prettier": "^4.0.0",
     "flow-bin": "^0.109.0",
     "husky": "^6.0.0",
     "nock": "^9.1.6",
     "nyc": "^14.1.1",
-    "tape": "^4.6.3"
+    "tape": "^4.6.3",
+    "typescript": "^4.6.2"
   },
   "bin": {
     "blockstack-subdomain-registrar": "lib/index.js"
