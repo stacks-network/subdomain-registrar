@@ -17,17 +17,12 @@ module.exports = {
     {
       files: ["*.ts", "*.tsx"], // Your TypeScript files extension
 
-      // As mentioned in the comments, you should extend TypeScript plugins here,
-      // instead of extending them outside the `overrides`.
-      // If you don't want to extend any rules, you don't need an `extends` attribute.
       extends: ["@stacks/eslint-config"],
-
       parserOptions: {
         project: ["./tsconfig.json"], // Specify it only for TypeScript files
       },
     },
   ],
-  //   ignorePatterns: ["lib/*", "client/*", "utils/*"],
   rules: {
     "comma-dangle": ["error", "never"],
     quotes: [2, "single"],
@@ -49,24 +44,5 @@ module.exports = {
     camelCase: 0,
     semi: [2, "never"],
     "valid-jsdoc": ["error"],
-    // "prettier/prettier": "error",
-
-    // "@typescript-eslint/no-inferrable-types": "off",
-    // "@typescript-eslint/camelcase": "off",
-    // "@typescript-eslint/no-empty-function": "off",
-    // "@typescript-eslint/no-use-before-define": ["error", "nofunc"],
-    // "@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: true }],
-    // "no-warning-comments": "warn",
-    // "tsdoc/syntax": "error",
-    // // TODO: fix these
-    // "@typescript-eslint/no-unsafe-assignment": "off",
-    // "@typescript-eslint/no-unsafe-member-access": "off",
-    // "@typescript-eslint/no-unsafe-call": "off",
-    // "@typescript-eslint/restrict-template-expressions": "off",
-    // "@typescript-eslint/explicit-module-boundary-types": "off",
-    // "@typescript-eslint/restrict-plus-operands": "off",
-
-    // // TODO: temporarily disable this until the express async handler is typed correctly
-    // "@typescript-eslint/no-misused-promises": "off",
   },
 };
