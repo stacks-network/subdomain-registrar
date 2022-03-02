@@ -3,7 +3,6 @@
 .*/node_modules/.staging/*
 .*/node_modules/npm/*
 
-
 [include]
 
 [libs]
