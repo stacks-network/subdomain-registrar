@@ -13,6 +13,7 @@
         "outDir": "lib",
         "noEmit": true,
         "baseUrl": ".",
+        "allowJs": true
     },
     "include": [
         "src/**/*"
