@@ -36,7 +36,7 @@ export function validlySignedUpdate() {
   throw new Error("Not implemented");
 }
 
-export async function checkProofs(owner: any, zonefile: any) {
+export async function checkProofs(owner: string, zonefile: any) {
   const profile = await resolveZoneFileToProfile(zonefile, owner);
   const proofs = await validateProofs(profile, owner, cheerioModule);
   return proofs.filter((x) => x.valid);
