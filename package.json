@@ -30,6 +30,10 @@
     "@commitlint/cli": "^12.1.1",
     "@commitlint/config-conventional": "^12.1.1",
     "@istanbuljs/nyc-config-babel": "^2.1.1",
+    "@types/cheerio": "^0.22.31",
+    "@types/node-fetch": "^2.6.1",
+    "@types/sqlite3": "^3.1.8",
+    "@types/winston": "^2.4.4",
     "babel-eslint": "^10.0.3",
     "babel-plugin-istanbul": "^5.2.0",
     "dotenv": "^8.2.0",
@@ -38,7 +42,8 @@
     "husky": "^6.0.0",
     "nock": "^9.1.6",
     "nyc": "^14.1.1",
-    "tape": "^4.6.3"
+    "tape": "^4.6.3",
+    "typescript": "^4.6.2"
   },
   "bin": {
     "blockstack-subdomain-registrar": "lib/index.js"
@@ -48,6 +53,7 @@
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
     "build": "babel src -d lib",
     "flow": "flow",
+    "tsc": "tsc",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",
