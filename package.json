@@ -56,6 +56,7 @@
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
     "build": "babel src -d lib",
     "flow": "flow",
+    "tsc": "tsc",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "compile-tests": "npm run lint && npm run flow && npm run build && babel tests/src -d tests/lib",

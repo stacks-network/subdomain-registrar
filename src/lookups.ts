@@ -9,7 +9,7 @@ import fetch from "node-fetch";
 import logger from "winston";
 import cheerioModule = require("cheerio");
 
-export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
+export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
   try {
     const nameInfoUrl =
       bskConfig.network.blockstackAPIUrl + "/v1/names/" + fullyQualifiedAddress;
