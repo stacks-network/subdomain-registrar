@@ -3,8 +3,8 @@
 To install from source:
 
 ```bash
-$ git clone https://github.com/blockstack/subdomain-registrar.git
-$ npm i
+git clone https://github.com/stacks-network/subdomain-registrar.git
+npm i
 ```
 
 # Starting up the registrar
@@ -17,9 +17,13 @@ BSK_SUBDOMAIN_CONFIG=/home/aaron/devel/subdomain-registrar/my-local-config.json 
 
 You can also install the subdomain registrar globally.  It should install as the program `blockstack-subdomain-registrar`.
 
+To do so run this script in your terminal :
 ```bash
-$ sudo npm i -g   # or, "sudo npm link"
-$ which blockstack-subdomain-registrar
+sudo npm i -g   # or, "sudo npm link"
+which blockstack-subdomain-registrar
+```
+You should receive the following output : 
+```
 /usr/bin/blockstack-subdomain-registrar
 ```
 
@@ -30,8 +34,13 @@ The subdomain registrar functions roughly as follows --- you give the registrar 
 ### Setting the Admin Password
 1. Set the `ADMIN_PASSWORD` environment var to strong password. 
 ex: 
+
+Run this command in your terminal : 
 ```bash
-$ pwgen -c 64 1
+pwgen -c 64 1
+```
+You should receive very similar output to this : 
+```
 raj5gohhai0ni3bah4chaa6keeCh4Oophongaikeichie2eirah8AjooyahZaifi
 ```
 
@@ -62,7 +71,7 @@ of names registered by a given IP) and social proof verification.
 
 Social proof verification performs the normal
 Blockstack JWT verification and social proof checks, provided by
-[blockstack.js](https://github.com/blockstack/blockstack.js).
+[blockstack.js](https://github.com/stacks-network/blockstack.js).
 
 In order to support registration requests from "trusted sources", you can use the `apiKeys` configuration option
 to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
@@ -110,7 +119,7 @@ In most cases, you want to use the compressed key.
 
 ### Configuring Instantaneous Resolution
 
-Per the design outlined [here](https://github.com/blockstack/blockstack-core/issues/750), the subdomain
+Per the design outlined [here](https://github.com/stacks-network/blockstack-core/issues/750), the subdomain
 registrar can be configured so that blockstack indexer nodes will respond with HTTP 301 status codes
 for missing subdomains. The 301 redirect will send the name lookup request to a URI designated by
 the _domain_ name. In a standard setup, this would allow nearly _instantaneous_ resolution of subdomain
@@ -137,27 +146,36 @@ Or by setting the environment variable `BSK_SUBDOMAIN_PROMETHEUS_PORT`
 
 Queue a registration:
 
+Run this command in your terminal :
+
 ```bash
-$ curl -X POST -H 'Authorization: bearer API-KEY-IF-USED' -H 'Content-Type: application/json' --data '{"zonefile": "$ORIGIN spqr\n$TTL 3600\n_https._tcp URI 10 1 \"https://gaia.blockstack.org/hub/1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi/profile.json\"\n", "name": "spqr", "owner_address": "1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi"}' http://localhost:3000/register/
+curl -X POST -H 'Authorization: bearer API-KEY-IF-USED' -H 'Content-Type: application/json' --data '{"zonefile": "$ORIGIN spqr\n$TTL 3600\n_https._tcp URI 10 1
+```
+You should receive similar to the following output : 
+```
+\"https://gaia.blockstack.org/hub/1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi/profile.json\"\n", "name": "spqr", "owner_address": "1HgW81v6MxGD76UwNbHXBi6Zre2fK8TwNi"}' http://localhost:3000/register/
 ```
 
 Force a batch:
 
 ```bash
-$ curl http://localhost:3000/issue_batch -X POST -H 'Authorization: bearer PASSWORDHERE'
+curl http://localhost:3000/issue_batch -X POST -H 'Authorization: bearer PASSWORDHERE'
 ```
 
 Force zonefile check:
 
 ```bash
-$ curl http://localhost:3000/check_zonefile -X POST -H 'Authorization: bearer PASSWORDHERE'
+curl http://localhost:3000/check_zonefile -X POST -H 'Authorization: bearer PASSWORDHERE'
 ```
 
 Check subdomain status:
 
+Run this command in your terminal : 
 ```bash
-$ curl http://localhost:3000/status/spqr | jq .
-
+curl http://localhost:3000/status/spqr | jq .
+```
+You should receive the following output : 
+```
 {
   "status": "Your subdomain was registered in transaction 6652bd350f048cd190ff04a5f0cdebbc166b13f3fd0e1126eacec8c600c25c6f -- it should propagate on the network once it has 6 confirmations."
 }
@@ -192,8 +210,12 @@ docker run -d -v data:/root/ -e BSK_SUBDOMAIN_CONFIG=/root/config.json -p 3000:3
 
 Root stores the sqlite database that the subdomain uses to queue registrations, and watch zonefiles for broadcasting. To test connectivity for this setup run the following curl command:
 
+Run this command in your terminal : 
 ```bash
-$ curl http://localhost:3000/index | jq
+curl http://localhost:3000/index | jq
+```
+You should receive the following output : 
+```
 {
   "status": true
 }
