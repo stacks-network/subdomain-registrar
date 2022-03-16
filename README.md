@@ -3,7 +3,7 @@
 To install from source:
 
 ```bash
-git clone https://github.com/stacks-network/subdomain-registrar.git
+git clone https://github.com/stacks-network/subdomain-registrar.git && cd subdomain-registrar
 npm i
 ```
 
@@ -71,7 +71,7 @@ of names registered by a given IP) and social proof verification.
 
 Social proof verification performs the normal
 Blockstack JWT verification and social proof checks, provided by
-[blockstack.js](https://github.com/stacks-network/blockstack.js).
+[blockstack.js](https://github.com/hirosystems/stacks.js/).
 
 In order to support registration requests from "trusted sources", you can use the `apiKeys` configuration option
 to add an array of allowed api keys. Requests with an `Authorization: bearer <apiKey>` header will then be able to
@@ -104,7 +104,7 @@ A common issue when configuring the subdomain registrar relates to private key f
 9bffeccf649d21814ce6a605ad5cb1bdf1ac9ee44c53ef08a292af82875154df
 ```
 
-Now -- this key actually corresponds to two different bitcoin addresses -- a [compressed and an uncomprossed address](https://bitcoin.org/en/glossary/compressed-public-key). Most bitcoin addresses in use (and the kind used by the Blockstack Browser) are compressed. The standard way to denote that the corresponding public-key should be compressed is by appending `01` to the private key: this results in a 66-character hex string private key.
+Now -- this key actually corresponds to two different bitcoin addresses -- a [compressed and an uncomprossed address](https://developer.bitcoin.org/glossary.html). Most bitcoin addresses in use (and the kind used by the Blockstack Browser) are compressed. The standard way to denote that the corresponding public-key should be compressed is by appending `01` to the private key: this results in a 66-character hex string private key.
 
 For example, these are the two different addresses for the above key:
 ```
@@ -119,7 +119,7 @@ In most cases, you want to use the compressed key.
 
 ### Configuring Instantaneous Resolution
 
-Per the design outlined [here](https://github.com/stacks-network/blockstack-core/issues/750), the subdomain
+Per the design outlined [here](https://github.com/stacks-network/stacks-blockchain/issues/750), the subdomain
 registrar can be configured so that blockstack indexer nodes will respond with HTTP 301 status codes
 for missing subdomains. The 301 redirect will send the name lookup request to a URI designated by
 the _domain_ name. In a standard setup, this would allow nearly _instantaneous_ resolution of subdomain
