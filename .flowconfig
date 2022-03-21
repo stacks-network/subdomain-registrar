@@ -2,11 +2,3 @@
 .*/node_modules/documentation/*
 .*/node_modules/.staging/*
 .*/node_modules/npm/*
-
-[include]
-
-[libs]
-
-[options]
-
-[lints]
