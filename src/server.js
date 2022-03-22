@@ -13,7 +13,7 @@ import {
   isRegistrationValid,
   isSubdomainRegistered,
   checkProofs
-} from './lookups.ts'
+} from './lookups'
 import { RegistrarQueueDB } from './db'
 import type { SubdomainRecord, QueueRecord } from './db'
 
