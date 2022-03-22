@@ -1,7 +1,6 @@
 {
   "presets": [ 
-    [ "@babel/preset-env",
-     { "targets": { "node": 12 } } ],
+    [ "@babel/preset-env"],
     "@babel/preset-flow",
     "@babel/preset-typescript"],
     

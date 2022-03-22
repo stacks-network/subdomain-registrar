@@ -53,7 +53,7 @@
   "scripts": {
     "start": "npm run build && node lib/index.js",
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
-    "build": "babel src -d lib",
+    "build": "babel src -d lib && babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline",
     "flow": "flow",
     "tsc": "tsc",
     "lint": "eslint src",

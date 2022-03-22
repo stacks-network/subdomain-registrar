@@ -21,9 +21,11 @@ export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
     } else {
       return false;
     }
-  } catch (err: any) {
-    if (err.message === "Name not found") {
+  } catch (err) {
+    //@ts-ignore
+    if (err.messag === "Name not found") {
       return false;
+      //@ts-ignore
     } else if (err.message === "Bad response status: 500") {
       return false; // currently, the blockstack api returns 500 on subdomain lookup errors.
     } else {
