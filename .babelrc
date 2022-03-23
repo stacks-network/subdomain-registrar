@@ -9,18 +9,17 @@
     "@babel/preset-flow"],
    "overrides": [
     {
-      "test": ["./src /**/*.ts"],
+      "test": ["./src/**/*.ts"],
       "presets": [
         "@babel/preset-typescript",
         [
           "@babel/preset-env",
           {
             "targets": {
-              "node": "current"
+              "node": 12,
             }
           }
         ],
-        "@babel/preset-react"
       ]
     }
   ],
