@@ -8,6 +8,7 @@
     "sourceMap": true,
     "esModuleInterop": false,
     "allowSyntheticDefaultImports": false,
+    "useUnknownInCatchVariables": false,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "outDir": "lib",
