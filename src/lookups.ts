@@ -21,7 +21,6 @@ export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
     } else {
       return false;
     }
- 
   } catch (err) {
     if (err.message === "Name not found") {
       return false;
