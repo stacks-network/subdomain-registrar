@@ -1,17 +1,10 @@
 module.exports = {
   root: true,
-  parser: "@babel/eslint-parser",
   plugins: ["eslint-plugin-prettier"],
   env: {
     es6: true,
     node: true,
     commonjs: true,
-  },
-  parserOptions: {
-    tsconfigRootDir: __dirname,
-    project: "./tsconfig.json",
-    ecmaVersion: 2020,
-    sourceType: "module",
   },
   overrides: [
     {
@@ -19,6 +12,9 @@ module.exports = {
 
       extends: ["@stacks/eslint-config"],
       parserOptions: {
+        tsconfigRootDir: __dirname,
+        ecmaVersion: 2020,
+        sourceType: "module",
         project: ["./tsconfig.json"], // Specify it only for TypeScript files
       },
     },
