@@ -12,6 +12,7 @@
     "bitcoinjs-lib": "^3.3.2",
     "blockstack": "^21.1.1",
     "bn.js": "^4.11.9",
+    "cheerio": "1.0.0-rc.10",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "node-fetch": "^2.6.7",
