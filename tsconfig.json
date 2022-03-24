@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": false,
+    "strict": true,
+    "sourceMap": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": false,
+    "useUnknownInCatchVariables": false,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "outDir": "lib",
+    "noEmit": true,
+    "baseUrl": ".",
+    "allowJs": true
+  },
+  "include": [
+    "src/lookups.ts",
+    "src/types",
+  ],
+  "exclude": [
+    "lib",
+    "node_modules"
+  ]
+}

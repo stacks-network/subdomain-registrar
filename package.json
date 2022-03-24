@@ -24,12 +24,16 @@
   "devDependencies": {
     "@babel/cli": "^7.6.3",
     "@babel/core": "^7.6.3",
+    "@babel/plugin-transform-typescript": "^7.16.8",
     "@babel/preset-env": "^7.6.3",
     "@babel/preset-flow": "^7.0.0",
+    "@babel/preset-typescript": "^7.16.7",
     "@babel/register": "^7.7.4",
     "@commitlint/cli": "^12.1.1",
     "@commitlint/config-conventional": "^12.1.1",
     "@istanbuljs/nyc-config-babel": "^2.1.1",
+    "@types/node-fetch": "^2.6.1",
+    "@types/sqlite3": "^3.1.8",
     "babel-eslint": "^10.0.3",
     "babel-plugin-istanbul": "^5.2.0",
     "dotenv": "^8.2.0",
@@ -38,7 +42,8 @@
     "husky": "^6.0.0",
     "nock": "^9.1.6",
     "nyc": "^14.1.1",
-    "tape": "^4.6.3"
+    "tape": "^4.6.3",
+    "typescript": "^4.6.2"
   },
   "bin": {
     "blockstack-subdomain-registrar": "lib/index.js"
@@ -46,7 +51,7 @@
   "scripts": {
     "start": "npm run build && node lib/index.js",
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
-    "build": "babel src -d lib",
+    "build": "tsc && babel src -d lib",
     "flow": "flow",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",

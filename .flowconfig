@@ -3,10 +3,5 @@
 .*/node_modules/.staging/*
 .*/node_modules/npm/*
 
-[include]
-
-[libs]
-
 [options]
-
-[lints]
+module.file_ext=.ts
