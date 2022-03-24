@@ -5,9 +5,8 @@ import {
 } from "blockstack";
 import { validateStacksAddress } from "@stacks/transactions";
 import fetch from "node-fetch";
-//@ts-ignore
 import logger from "winston";
-
+import * as cheerio from "cheerio";
 
 export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
   try {
@@ -24,7 +23,6 @@ export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
   } catch (err) {
     if (err.message === "Name not found") {
       return false;
-
     } else if (err.message === "Bad response status: 500") {
       return false; // currently, the blockstack api returns 500 on subdomain lookup errors.
     } else {
@@ -39,7 +37,7 @@ export function validlySignedUpdate() {
 
 export async function checkProofs(owner: string, zonefile: any) {
   const profile = await resolveZoneFileToProfile(zonefile, owner);
-  const proofs = await validateProofs(profile, owner);
+  const proofs = await validateProofs(profile, owner, cheerio);
   return proofs.filter((x) => x.valid);
 }
 

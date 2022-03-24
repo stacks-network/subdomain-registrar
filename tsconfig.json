@@ -17,7 +17,8 @@
     "allowJs": true
   },
   "include": [
-    "src/lookups.ts"
+    "src/lookups.ts",
+    "src/types",
   ],
   "exclude": [
     "lib",
