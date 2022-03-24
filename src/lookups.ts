@@ -6,7 +6,6 @@ import {
 import { validateStacksAddress } from "@stacks/transactions";
 import fetch from "node-fetch";
 import logger from "winston";
-import * as cheerio from "cheerio";
 
 export async function isSubdomainRegistered(fullyQualifiedAddress: string) {
   try {
@@ -37,7 +36,9 @@ export function validlySignedUpdate() {
 
 export async function checkProofs(owner: string, zonefile: any) {
   const profile = await resolveZoneFileToProfile(zonefile, owner);
-  const proofs = await validateProofs(profile, owner, cheerio);
+  // ts-ignore used below to not modify the code and not add the cheerio module that is in the validate proofs fn type
+  // @ts-ignore
+  const proofs = await validateProofs(profile, owner);
   return proofs.filter((x) => x.valid);
 }
 
