@@ -17,6 +17,7 @@ module.exports = {
       files: ["*.ts", "*.tsx"], // Your TypeScript files extension
 
       extends: ["@stacks/eslint-config"],
+      project: ["./tsconfig.json"], // Specify it only for TypeScript files
     },
   ],
   rules: {
