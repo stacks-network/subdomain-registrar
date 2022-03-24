@@ -13,7 +13,7 @@ module.exports = {
       extends: ["@stacks/eslint-config"],
       parserOptions: {
         tsconfigRootDir: __dirname,
-        ecmaVersion: 2020,
+        ecmaVersion: 2019,
         sourceType: "module",
         project: ["./tsconfig.json"], // Specify it only for TypeScript files
       },
