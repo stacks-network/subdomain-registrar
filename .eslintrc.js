@@ -6,17 +6,17 @@ module.exports = {
     node: true,
     commonjs: true,
   },
+  parserOptions: {
+    tsconfigRootDir: __dirname,
+    ecmaVersion: 2020,
+    sourceType: "module",
+    project: ["./tsconfig.json"], // Specify it only for TypeScript files
+  },
   overrides: [
     {
       files: ["*.ts", "*.tsx"], // Your TypeScript files extension
 
       extends: ["@stacks/eslint-config"],
-      parserOptions: {
-        tsconfigRootDir: __dirname,
-        ecmaVersion: 2019,
-        sourceType: "module",
-        project: ["./tsconfig.json"], // Specify it only for TypeScript files
-      },
     },
   ],
   rules: {
