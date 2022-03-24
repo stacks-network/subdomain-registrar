@@ -32,6 +32,7 @@
     "@commitlint/cli": "^12.1.1",
     "@commitlint/config-conventional": "^12.1.1",
     "@istanbuljs/nyc-config-babel": "^2.1.1",
+    "@types/cheerio": "^0.22.31",
     "@types/node-fetch": "^2.6.1",
     "@types/sqlite3": "^3.1.8",
     "@types/winston": "^2.4.4",
