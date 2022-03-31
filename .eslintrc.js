@@ -1,5 +1,6 @@
 module.exports = {
   root: true,
+  parser: "@babel/eslint-parser",
   plugins: ["eslint-plugin-prettier"],
   env: {
     es6: true,
@@ -15,9 +16,7 @@ module.exports = {
   overrides: [
     {
       files: ["*.ts", "*.tsx"], // Your TypeScript files extension
-
       extends: ["@stacks/eslint-config"],
-      project: ["./tsconfig.json"], // Specify it only for TypeScript files
     },
   ],
   rules: {
@@ -25,6 +24,7 @@ module.exports = {
     quotes: [2, "single"],
     "eol-last": 2,
     "no-debugger": 1,
+
     noMixedRequires: 0,
     noUnderscoreDangle: 0,
     noMultiSpaces: 0,
