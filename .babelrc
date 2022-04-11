@@ -4,20 +4,5 @@
     "@babel/preset-flow",
     "@babel/preset-typescript"
   ],
-  "overrides": [
-    {
-      "test": ["./src/**/*.ts"],
-      "presets": [
-        [
-          "@babel/preset-env",
-          {
-            "targets": {
-              "node": 12
-            }
-          }
-        ]
-      ]
-    }
-  ],
   "plugins": ["istanbul"]
 }
