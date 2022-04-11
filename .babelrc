@@ -1,7 +1,23 @@
 {
-  "presets": [ 
-    [ "@babel/preset-env",
-     { "targets": { "node": 12 } } ],
-    "@babel/preset-flow"],
+  "presets": [
+    ["@babel/preset-env", { "targets": { "node": 12 } }],
+    "@babel/preset-flow",
+    "@babel/preset-typescript"
+  ],
+  "overrides": [
+    {
+      "test": ["./src/**/*.ts"],
+      "presets": [
+        [
+          "@babel/preset-env",
+          {
+            "targets": {
+              "node": 12
+            }
+          }
+        ]
+      ]
+    }
+  ],
   "plugins": ["istanbul"]
 }
