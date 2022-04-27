@@ -234,7 +234,7 @@ export async function updateGlobalBlockHeight(): Promise<void> {
       throw new Error(response.message)
     }
   } catch (error) {
-    throw new Error('Error fetching block height.')
+    throw new Error('Error fetching block height. ' + error.message)
   }
 }
 
