@@ -206,8 +206,11 @@ export async function submitUpdate(
         headers: { 'Content-Type': 'application/json' }
       }
     )
-    const txHash = await result.json()
-    return txHash
+    const parsedResponse = await result.json()
+    if(result.status===200){
+      return parsedResponse
+    }
+    throw new Error(JSON.stringify(parsedResponse))
   } catch (err) {
     throw new Error('Error post transaction: ' + err.message)
   }

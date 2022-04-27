@@ -278,7 +278,7 @@ export function testSubdomainServer() {
   })
 
   test('submitBatch', async (t) => {
-    t.plan(10)
+    t.plan(11)
     nock.cleanAll()
 
     nock('https://core.blockstack.org')
@@ -351,14 +351,17 @@ export function testSubdomainServer() {
 
     nock('https://core.blockstack.org')
       .get('/v2/contracts/interface/ST000000000000000000002AMW42H/bns')
+      .times(2)
       .reply(200, bns)
 
     nock('https://core.blockstack.org')
       .get('/v2/fees/transfer')
+      .times(2)
       .reply(200, 1)
 
     nock('https://core.blockstack.org')
       .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
+      .times(2)
       .reply(200, {
         balance: '0x00000000000000000000000000000000',
         locked: '0x00000000000000000000000000000000',
@@ -376,6 +379,16 @@ export function testSubdomainServer() {
     const b = await s.submitBatch()
     const expected_tx = 'ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f'
     t.equal(b, expected_tx)
+
+    nock('https://core.blockstack.org')
+      .post('/v2/transactions')
+      .reply(400, '{"error": "transaction rejected", "reason": "not enough funds"}')
+
+    await s.submitBatch()
+      .catch((err)=>{
+        const expected_error = 'Error post transaction: {"error":"transaction rejected","reason":"not enough funds"}'
+        t.equal(err.message, expected_error)
+     })
 
     nock('https://core.blockstack.org')
       .get('/v1/names/foo.bar.id')
