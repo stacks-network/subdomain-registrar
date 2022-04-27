@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.1...v1.1.2) (2022-04-27)
+
+
+### Bug Fixes
+
+* fixed last tx_id issue when a transaction is rejected ([9938722](https://github.com/stacks-network/subdomain-registrar/commit/993872268b5b89bedc5ee4d7497f111fb1ede18e))
+
 ## [1.1.1](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.0...v1.1.1) (2022-04-01)
 
 
