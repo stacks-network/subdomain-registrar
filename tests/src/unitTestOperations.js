@@ -65,27 +65,27 @@ export function unitTestOperations() {
 
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/bar.id')
       .reply(200, {
         address: testAddress
       })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .post('/v2/transactions')
       .reply(200, '"tx-hash"')
 
-    nock('https://core.blockstack.org')
-      .get('/v2/contracts/interface/ST000000000000000000002AMW42H/bns')
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/contracts/interface/SP000000000000000000002Q6VF78/bns')
       .reply(200, bns)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/fees/transfer')
       .reply(200, 1)
 
 
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
       .reply(200, {
         balance: '0x00000000000000000000000000000000',
@@ -116,16 +116,16 @@ export function unitTestOperations() {
 
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .reply(200, { burn_block_height: 300 })
 
-    txs.forEach(x => nock('https://core.blockstack.org')
+    txs.forEach(x => nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get(`/extended/v1/tx/${x.txHash}`)
       .reply(200, { block_height: x.blockheight }))
 
-    // nock('https://core.blockstack.org')
+    // nock('https://stacks-node-api.mainnet.stacks.co')
     //   .persist()
     //   .post('/v1/zonefile/')
     //   .reply(202, { servers: ['me.co'] })  //todo v1/zonefile commented for now 

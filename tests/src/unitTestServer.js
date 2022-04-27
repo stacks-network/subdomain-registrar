@@ -33,44 +33,44 @@ export function testSubdomainServer() {
     t.plan(26)
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .reply(200, { burn_block_height: 300 })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/foo.bar.id')
       .reply(200, { status: 'registered_subdomain' })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.bar.id')
       .reply(200, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/ba.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/car.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/tar.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/ipwhitelisted0.bar.id')
       .reply(404, {})
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/ipwhitelisted1.bar.id')
       .reply(404, {})
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/ipwhitelisted2.bar.id')
       .reply(404, {})
@@ -239,12 +239,12 @@ export function testSubdomainServer() {
     t.plan(2)
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v2/info')
       .reply(200, { burn_block_height: 300 })
@@ -281,22 +281,22 @@ export function testSubdomainServer() {
     t.plan(11)
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.id')
       .reply(200, { address: testAddress })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(2)
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .reply(200, { burn_block_height: 300 })
 
@@ -326,12 +326,12 @@ export function testSubdomainServer() {
     s.minBatchSize = 1
 
     // make it so that foo.bar.id is now *not* valid to register
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(1)
       .reply(200, { status: 'registered_subdomain' })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .post('/v2/transactions')
       .reply(200, '"ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f"')
 
@@ -349,17 +349,17 @@ export function testSubdomainServer() {
       })
     await Promise.all([acquiredWait, failureBatch])
 
-    nock('https://core.blockstack.org')
-      .get('/v2/contracts/interface/ST000000000000000000002AMW42H/bns')
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/contracts/interface/SP000000000000000000002Q6VF78/bns')
       .times(2)
       .reply(200, bns)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/fees/transfer')
       .times(2)
       .reply(200, 1)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
       .times(2)
       .reply(200, {
@@ -371,7 +371,7 @@ export function testSubdomainServer() {
         nonce_proof: ''
       })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(1)
       .reply(400, { status: 'registered_subdomain' })
@@ -380,7 +380,7 @@ export function testSubdomainServer() {
     const expected_tx = 'ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f'
     t.equal(b, expected_tx)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .post('/v2/transactions')
       .reply(400, '{"error": "transaction rejected", "reason": "not enough funds"}')
 
@@ -390,7 +390,7 @@ export function testSubdomainServer() {
         t.equal(err.message, expected_error)
      })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(1)
       .reply(404, { status: 'registered_subdomain' })
@@ -403,12 +403,12 @@ export function testSubdomainServer() {
     t.ok(x.status.startsWith('Subdomain is queued'),
       `foo.bar.id should still be queued for update, was: ${x.status}`)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .times(1)
       .reply(200, { burn_block_height: 300 })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get(`/extended/v1/tx/${expected_tx}`)
       .reply(200, { block_height: 300 })
@@ -417,7 +417,7 @@ export function testSubdomainServer() {
 
     t.equal((await s.db.getTrackedTransactions()).length, 1, 'Should still be tracking 1 transaction')
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .times(1)
       .reply(200, { burn_block_height: 310 })
@@ -430,7 +430,7 @@ export function testSubdomainServer() {
   test('shutdown', async (t) => {
     t.plan(1)
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v2/info')
       .reply(200, { burn_block_height: 300 })
 
@@ -459,32 +459,32 @@ export function testSubdomainServer() {
     t.plan(12)
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v2/info')
       .reply(200, { height: 300 })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.id')
       .reply(200, { address: 'ST30ZKFVB3NYTA5RWPFGK9MJ6XZDRQ5SY3QDY51RD' })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/foo.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/alice.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/fo.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
@@ -519,7 +519,7 @@ export function testSubdomainServer() {
     t.pass('should queue bar.bar.id')
 
     // make it so that foo.bar.id is now *not* valid to register
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(2)
       .reply(200, {})
@@ -570,7 +570,7 @@ export function testSubdomainServer() {
       t.ok(true, 'Should have failed')
     }
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .times(1)
       .reply(404, {})

@@ -11,7 +11,7 @@ export function unitTestLookups() {
 
     nock.cleanAll()
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .reply(200, { status: 'registered_subdomain' })
 
@@ -24,7 +24,7 @@ export function unitTestLookups() {
     t.plan(1)
 
     nock.cleanAll()
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .reply(404, {})
 
@@ -42,12 +42,12 @@ export function unitTestLookups() {
     t.plan(2)
 
     nock.cleanAll()
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .reply(510, {})
 
     nock.cleanAll()
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/good.bar.id')
       .reply(500, {})
 
@@ -64,15 +64,15 @@ export function unitTestLookups() {
     t.plan(7)
 
     nock.cleanAll()
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/foo.bar.id')
       .reply(200, { status: 'registered_subdomain' })
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/bar.bar.id')
       .reply(404, {})
 
-    nock('https://core.blockstack.org')
+    nock('https://stacks-node-api.mainnet.stacks.co')
       .get('/v1/names/car.bar.id')
       .reply(500, {})
 
