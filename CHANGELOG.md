@@ -1,3 +1,15 @@
+## [1.1.3](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.2...v1.1.3) (2022-05-02)
+
+
+### Bug Fixes
+
+* get bns name from network at runtime ([a44e24f](https://github.com/stacks-network/subdomain-registrar/commit/a44e24f3148f12440803850d86025b20c95738f6))
+* mainnet bns contract addr ([060135f](https://github.com/stacks-network/subdomain-registrar/commit/060135f7d1751de8904df81d57cd9fe43701b001))
+* only check name lookup JSON if 200 ([4c2d9db](https://github.com/stacks-network/subdomain-registrar/commit/4c2d9db11cec93903804ab0e7465529948fe16f9))
+* support network config on mainnet ([96c275d](https://github.com/stacks-network/subdomain-registrar/commit/96c275d83c2592d8dc418f3281e6b1e2e8fef748))
+* throw actual error in catch block ([1534e35](https://github.com/stacks-network/subdomain-registrar/commit/1534e35f114458bd010850ca558a79584df9167c))
+* update global heights problem ([14927b1](https://github.com/stacks-network/subdomain-registrar/commit/14927b1fa87d9beb6ada24dda077de14add48acf))
+
 ## [1.1.2](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.1...v1.1.2) (2022-04-27)
 
 
