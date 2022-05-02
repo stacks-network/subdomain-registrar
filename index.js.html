@@ -22,12 +22,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">0% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>0/20</span>
+        <span class='fraction'>0/22</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">0% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>0/4</span>
+        <span class='fraction'>0/6</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">0% </span>
@@ -37,7 +37,7 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">0% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>0/20</span>
+        <span class='fraction'>0/21</span>
       </div>
     </div>
     <p class="quiet">
@@ -96,8 +96,7 @@
 <a name='L48'></a><a href='#L48'>48</a>
 <a name='L49'></a><a href='#L49'>49</a>
 <a name='L50'></a><a href='#L50'>50</a>
-<a name='L51'></a><a href='#L51'>51</a>
-<a name='L52'></a><a href='#L52'>52</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L51'></a><a href='#L51'>51</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -111,19 +110,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -131,21 +126,24 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">#!/usr/bin/env node
@@ -159,14 +157,17 @@ import { initializeBlockstackCore, configureRegtest } from './developmode'
 import { makeHTTPServer } from './http'
 import { getConfig } from './config'
 import { config as bskConfig } from 'blockstack'
-import { StacksMainnet } from '@stacks/network'
+import { StacksMainnet, StacksTestnet } from '@stacks/network'
+&nbsp;
+<span class="cstat-no" title="statement not covered" >if (process.env.BSK_SUBDOMAIN_TESTNET) {</span>
+<span class="cstat-no" title="statement not covered" >  bskConfig.network = new StacksTestnet()</span>
+} else {
+<span class="cstat-no" title="statement not covered" >  bskConfig.network = new StacksMainnet()</span>
+}
 &nbsp;
 const config = <span class="cstat-no" title="statement not covered" >getConfig()</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >winston.configure(config.winstonConfig)</span>
-&nbsp;
-&nbsp;
-<span class="cstat-no" title="statement not covered" >bskConfig.network = new StacksMainnet() </span>//TODO figure out a better way to handle mainnet 
 &nbsp;
 &nbsp;
 <span class="cstat-no" title="statement not covered" >if (config.regtest) {</span>
@@ -174,10 +175,9 @@ const config = <span class="cstat-no" title="statement not covered" >getConfig()
 }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >if (config.development) {</span>
-<span class="cstat-no" title="statement not covered" >  initializationPromise = initializationPromise.then(</span>
-<span class="fstat-no" title="function not covered" >    (s</span>erver) =&gt; {
-<span class="cstat-no" title="statement not covered" >      return initializeBlockstackCore()</span>
-        .then(<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >server)</span>
+<span class="cstat-no" title="statement not covered" >  initializationPromise = initializationPromise</span>
+    .then(<span class="fstat-no" title="function not covered" >(s</span>erver) =&gt; {
+<span class="cstat-no" title="statement not covered" >      return initializeBlockstackCore().then(<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >server)</span></span>
     })
     .catch(<span class="fstat-no" title="function not covered" >(e</span>rr) =&gt; {
 <span class="cstat-no" title="statement not covered" >      winston.error(err)</span>
@@ -185,27 +185,24 @@ const config = <span class="cstat-no" title="statement not covered" >getConfig()
 <span class="cstat-no" title="statement not covered" >      throw err</span>
     })
 }
-let initializationPromise = <span class="cstat-no" title="statement not covered" >makeHTTPServer(config)</span>
-  .catch(<span class="fstat-no" title="function not covered" >(e</span>rr) =&gt; {
-<span class="cstat-no" title="statement not covered" >    winston.error(err)</span>
-<span class="cstat-no" title="statement not covered" >    winston.error(err.stack)</span>
-<span class="cstat-no" title="statement not covered" >    throw err</span>
-  })
+let initializationPromise = <span class="cstat-no" title="statement not covered" >makeHTTPServer(config).catch(<span class="fstat-no" title="function not covered" >(e</span>rr) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  winston.error(err)</span>
+<span class="cstat-no" title="statement not covered" >  winston.error(err.stack)</span>
+<span class="cstat-no" title="statement not covered" >  throw err</span>
+})
 &nbsp;
-<span class="cstat-no" title="statement not covered" >initializationPromise</span>
-  .then(<span class="fstat-no" title="function not covered" >(s</span>erver) =&gt; {
-<span class="cstat-no" title="statement not covered" >    server.listen(config.port, <span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      console.log('Subdomain registrar started on', config.port)</span>
-    })
+<span class="cstat-no" title="statement not covered" >initializationPromise.then(<span class="fstat-no" title="function not covered" >(s</span>erver) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  server.listen(config.port, <span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    console.log('Subdomain registrar started on', config.port)</span>
   })
-&nbsp;
+})
 &nbsp;</pre></td></tr>
 </table></pre>
 <div class='push'></div><!-- for sticky footer -->
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="https://istanbul.js.org/" target="_blank">istanbul</a> at Wed Apr 27 2022 13:47:12 GMT+0000 (Coordinated Universal Time)
+  generated by <a href="https://istanbul.js.org/" target="_blank">istanbul</a> at Mon May 02 2022 16:21:58 GMT+0000 (Coordinated Universal Time)
 </div>
 </div>
 <script src="prettify.js"></script>
