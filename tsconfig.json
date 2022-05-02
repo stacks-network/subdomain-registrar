@@ -10,6 +10,7 @@
         "allowSyntheticDefaultImports": false,
         "resolveJsonModule": true,
         "skipLibCheck": true,
+        "useUnknownInCatchVariables": false,
         "outDir": "lib",
         "noEmit": true,
         "baseUrl": ".",
