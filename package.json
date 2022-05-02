@@ -6,7 +6,7 @@
   "dependencies": {
     "@promster/express": "^3.2.0",
     "@promster/server": "^3.2.0",
-    "@stacks/network": "^1.0.0-beta.20",
+    "@stacks/network": "^1.2.2",
     "@stacks/transactions": "^1.0.0-beta.20",
     "async-lock": "^1.1.3",
     "bitcoinjs-lib": "^3.3.2",
@@ -50,6 +50,7 @@
   "scripts": {
     "start": "npm run build && node lib/index.js",
     "start:regtest": "BSK_SUBDOMAIN_CONFIG=config-develop.json BSK_SUBDOMAIN_REGTEST=true npm run start",
+    "start:testnet": "BSK_SUBDOMAIN_TESTNET=true npm run start",
     "build": "babel src -d lib",
     "flow": "flow",
     "lint": "eslint src",
