@@ -214,6 +214,49 @@ export class RegistrarQueueDB {
     return dbRun(this.db, dbCmd, dbArgs)
   }
 
+  makeTransferUpdates(
+    transferedSubdomains: QueueRecord[],
+    txHash: string
+  ): Promise<void> {
+    const dbCmd =
+      'INSERT INTO subdomain_queue ' +
+      '(subdomainName, owner, sequenceNumber, zonefile, signature,  status, status_more) VALUES ?'
+
+    const dbArgs = transferedSubdomains.map((subdomain) => {
+      return [
+        subdomain.subdomainName,
+        subdomain.owner,
+        subdomain.sequenceNumber,
+        subdomain.zonefile,
+        subdomain.signature,
+        'submitted',
+        txHash
+      ]
+    })
+
+    return dbRun(this.db, dbCmd, [dbArgs])
+  }
+
+  logTransferRequestorData(
+    subdomainName: string,
+    ownerAddress: string,
+    ipAddress: string
+  ) {
+    const lookup = `SELECT queue_ix FROM subdomain_queue WHERE subdomainName = ?
+                    AND owner = ? AND sequenceNumber = 1`
+    const insert =
+      'INSERT INTO ip_info (ip_address, owner, queue_ix) VALUES (?, ?, ?)'
+    return dbAll(this.db, lookup, [subdomainName, ownerAddress]).then(
+      (results) => {
+        if (results.length != 1) {
+          throw new Error('No queued entry found.')
+        }
+        const queueIndex = results[0].queue_ix
+        return dbRun(this.db, insert, [ipAddress, ownerAddress, queueIndex])
+      }
+    )
+  }
+
   async updateStatusFor(
     subdomains: Array<string>,
     status: string,
@@ -289,6 +332,29 @@ export class RegistrarQueueDB {
       'SELECT status, status_more, owner, zonefile FROM subdomain_queue' +
       ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
     return dbAll(this.db, lookup, [subdomainName])
+  }
+
+  async getSubdomainRecord(subdomainName: string): Promise<SubdomainRecord> {
+    const lookup =
+      'SELECT subdomainName, owner, sequenceNumber, zonefile, signature, status, queue_ix' +
+      ' FROM subdomain_queue' +
+      ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1'
+
+    const result = await dbAll(this.db, lookup, [subdomainName])
+
+    if (result.length != 1) {
+      throw new Error('no subdomain found')
+    }
+    return {
+      subdomainName: result[0].subdomainName,
+      owner: result[0].owner,
+      sequenceNumber: parseInt(result[0].sequenceNumber),
+      zonefile: result[0].zonefile,
+      signature: result[0].signature,
+      status: result[0].status,
+      queue_ix: result[0].queue_ix
+    }
+
   }
 
   async listSubdomains(

@@ -7,7 +7,8 @@ import {
   makeUpdateZonefile,
   submitUpdate,
   checkTransactions,
-  hash160
+  hash160,
+  subdomainOpToZFPieces
 } from './operations'
 import {
   isRegistrationValid,
@@ -16,6 +17,14 @@ import {
 } from './lookups'
 import { RegistrarQueueDB } from './db'
 import type { SubdomainRecord, QueueRecord } from './db'
+import {
+  validateStacksAddress,
+  publicKeyFromSignature,
+  publicKeyToAddress,
+  AddressVersion
+} from '@stacks/transactions'
+import type { SubdomainOp } from './operations'
+import * as crypto from 'crypto'
 
 const TIME_WEEK = 604800
 const QUEUE_LOCK = 'queue'
@@ -53,6 +62,7 @@ export class SubdomainServer {
   checkCoreOnBatching: boolean;
   lastSeenBlock: number;
   minBatchSize: number;
+  regtest: ?boolean;
 
   constructor(config: {
     domainName: string,
@@ -70,6 +80,7 @@ export class SubdomainServer {
     ipWhitelist?: Array<string>,
     nameMinLength: number,
     minBatchSize?: number,
+    regtest?: boolean,
   }) {
     this.lastSeenBlock = 0
 
@@ -109,6 +120,7 @@ export class SubdomainServer {
     this.checkCoreOnBatching = config.checkCoreOnBatching
     this.db = new RegistrarQueueDB(config.dbLocation)
     this.lock = new AsyncLock()
+    this.regtest = config.regtest
   }
 
   async initializeServer() {
@@ -186,7 +198,7 @@ export class SubdomainServer {
     if (!this.isValidLength(subdomainName)) {
       logger.warn(
         `Discarding operation for ${subdomainName}` +
-        ` because subdomain shorter than ${this.nameMinLength} characters.`,
+          ` because subdomain shorter than ${this.nameMinLength} characters.`,
         { msgType: 'spam_fail', reason: 'name_length', ip: ipAddress }
       )
       return `NameLength: Username must be ${this.nameMinLength} characters or longer.`
@@ -410,7 +422,7 @@ export class SubdomainServer {
             invalid.forEach((op) =>
               logger.warn(
                 `Skipping registration of ${op.subdomainName} ` +
-                'because it is not valid.',
+                  'because it is not valid.',
                 { msgType: 'skip_batch_inclusion', name: op.subdomainName }
               )
             )
@@ -548,7 +560,6 @@ export class SubdomainServer {
             const completed = statuses.filter((x) => x.status)
 
             await this.markTransactionsComplete(completed)
-
             logger.debug('Lock released')
           } catch (err) {
             logger.error(`Failure trying to publish zonefiles: ${err}`)
@@ -587,6 +598,131 @@ export class SubdomainServer {
       return formattedRow
     })
     return { message: rows, statusCode: 200 }
+  }
+
+  async validateTransferSubdomain(
+    subdomainOp: SubdomainOp,
+    newOwner: string,
+    signature: string
+  ) {
+    // owner should be a stacks address
+    if (!validateStacksAddress(newOwner)) {
+      return `'${newOwner}' is not a valid stx address`
+    }
+
+    const signerAddress = subdomainOp.owner
+    subdomainOp.owner = newOwner
+    subdomainOp.sequenceNumber = subdomainOp.sequenceNumber + 1
+
+    const subdomainPieces = subdomainOpToZFPieces(subdomainOp)
+    const textToSign = subdomainPieces.txt.join(',')
+    const hash = crypto.createHash('sha256').update(textToSign).digest('hex')
+
+    try {
+      const publicKey = publicKeyFromSignature(hash, { data: signature })
+      let address = ''
+
+      if (this.regtest) {
+        address = publicKeyToAddress(
+          AddressVersion.MainnetSingleSig,
+          publicKey
+        )
+      } else {
+        address = publicKeyToAddress(
+          AddressVersion.TestnetSingleSig,
+          publicKey
+        )
+      }
+
+      if (signerAddress !== address) {
+        return `signature error: '${newOwner}' has invalid signatre`
+      }
+    } catch (error) {
+      return `signature error: ${newOwner} ${error.message}`
+    }
+
+    return false
+  }
+
+  async transferSubdomain(
+    requestedSubdomains: {
+      subdomainName: string,
+      new_owner: string,
+      signature: string,
+    }[],
+    authorization: ?string = '',
+    ipAddress: string = ''
+  ): Promise<void> {
+    if (authorization && authorization.startsWith('bearer ')) {
+      const apiKey = authorization.slice('bearer '.length)
+      if (this.apiKeys.includes(apiKey)) {
+        logger.info('Passed spam checks with API key', {
+          msgType: 'spam_pass',
+          reason: 'api_key',
+          apiKey: apiKey.slice(0, 5)
+        })
+      }
+    }
+
+    const subdomainRecords: SubdomainOp[] = []
+    //extract subdomain from db
+    if (requestedSubdomains.length === 0) {
+      throw new Error('empty subdomains list')
+    }
+    for (let i = 0; i < requestedSubdomains.length; i++) {
+      const subdomainDb = await this.db.getSubdomainRecord(
+        requestedSubdomains[i].subdomainName
+      )
+      const isValid = await this.validateTransferSubdomain(
+        subdomainDb,
+        requestedSubdomains[i].new_owner,
+        requestedSubdomains[i].signature
+      )
+      if (isValid) {
+        throw new Error(isValid)
+      }
+      const newSubdomain = {
+        ...subdomainDb,
+        owner: requestedSubdomains[i].new_owner,
+        signature: requestedSubdomains[i].signature,
+        sequenceNumber: subdomainDb.sequenceNumber + 1
+      }
+      subdomainRecords.push(newSubdomain)
+    }
+
+    const update = makeUpdateZonefile(
+      this.domainName,
+      this.uriEntries,
+      subdomainRecords,
+      this.zonefileSize
+    )
+    const zonefile = update.zonefile
+
+    const txHash = await submitUpdate(
+      this.domainName,
+      update.zonefile,
+      this.ownerKey,
+      this.paymentKey
+    )
+
+    //deprecate old subdomain data
+    this.db.updateStatusFor(
+      subdomainRecords.map((subdomain) => subdomain.subdomainName),
+      'transfered',
+      'subdomain transfered to a new address'
+    )
+
+    //make updates for transfer subdomains
+    this.db.makeTransferUpdates(subdomainRecords, txHash)
+    subdomainRecords.forEach((subdomain) => {
+      this.db.logTransferRequestorData(
+        subdomain.subdomainName,
+        subdomain.owner,
+        ipAddress
+      )
+    })
+    this.db.trackTransaction(txHash, zonefile)
+    return txHash
   }
 
   shutdown() {
