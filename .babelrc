@@ -12,7 +12,5 @@
   ],
   "plugins": [
     "istanbul"
-  ],
-  "sourceMaps": "inline",
-  "retainLines": true
+  ]
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import winston from 'winston';
-import dotenv from 'dotenv';
+import * as winston from 'winston';
+import * as dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -12,9 +12,9 @@ import { config as bskConfig } from 'blockstack';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 
 if (process.env.BSK_SUBDOMAIN_TESTNET) {
-  bskConfig.network = new StacksTestnet();
+  bskConfig.network = new StacksTestnet() as any;
 } else {
-  bskConfig.network = new StacksMainnet();
+  bskConfig.network = new StacksMainnet() as any;
 }
 
 const config = getConfig();
@@ -24,6 +24,12 @@ winston.configure(config.winstonConfig);
 if (config.regtest) {
   configureRegtest();
 }
+
+let initializationPromise = makeHTTPServer(config).catch(err => {
+  winston.error(err);
+  winston.error(err.stack);
+  throw err;
+});
 
 if (config.development) {
   initializationPromise = initializationPromise
@@ -36,11 +42,6 @@ if (config.development) {
       throw err;
     });
 }
-let initializationPromise = makeHTTPServer(config).catch(err => {
-  winston.error(err);
-  winston.error(err.stack);
-  throw err;
-});
 
 initializationPromise.then(server => {
   server.listen(config.port, () => {

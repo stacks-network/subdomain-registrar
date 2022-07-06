@@ -1,5 +1,5 @@
 import { config as bskConfig, network as bskNetwork } from 'blockstack';
-import logger from 'winston';
+import * as logger from 'winston';
 import { exec } from 'child_process';
 import { StacksMocknet } from '@stacks/network';
 
@@ -8,13 +8,13 @@ export const OWNER_SK = '8f87d1ea26d03259371675ea3bd31231b67c5df0012c205c154764a
 export const DEVELOP_DOMAIN = 'foo.id';
 export const ADMIN_PASSWORD = 'tester129';
 
-function pExec(cmd) {
+function pExec(cmd: string) {
   return new Promise((resolve, reject) => {
     exec(cmd, function (err, stdout, stderr) {
       if (err) {
         reject(err);
       } else {
-        resolve(stdout, stderr);
+        resolve(stdout);
       }
     });
   });
@@ -22,6 +22,7 @@ function pExec(cmd) {
 
 export function configureRegtest() {
   bskConfig.network = bskNetwork.defaults.LOCAL_REGTEST;
+  // @ts-ignore
   bskConfig.network = new StacksMocknet(); //for development case
   if (process.env.BLOCKSTACK_TEST_CLIENT_RPC_PORT) {
     const port = process.env.BLOCKSTACK_TEST_CLIENT_RPC_PORT;
@@ -29,10 +30,7 @@ export function configureRegtest() {
   }
 }
 
-export function initializeBlockstackCore(
-  forceRestart: ?Boolean = false,
-  dockerTag: ?String = null
-) {
+export function initializeBlockstackCore(forceRestart: Boolean = false, dockerTag?: String) {
   if (!dockerTag) {
     dockerTag = 'blockstack-regtester';
   }

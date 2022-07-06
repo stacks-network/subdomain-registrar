@@ -1,12 +1,12 @@
-/* @flow */
-
 import { config as bskConfig } from 'blockstack';
 import { SERVER_GLOBALS } from './server';
+// @ts-ignore
 import { makeZoneFile } from 'zone-file';
-import logger from 'winston';
+import * as logger from 'winston';
 import fetch from 'node-fetch';
+// @ts-ignore
 import { crypto } from 'bitcoinjs-lib';
-import RIPEMD160 from 'ripemd160';
+import * as RIPEMD160 from 'ripemd160';
 
 import {
   bufferCV,
@@ -98,7 +98,7 @@ export function makeUpdateZonefile(
   updates: Array<SubdomainOp>,
   maxZonefileBytes: number
 ) {
-  const subdomainRecs = [];
+  const subdomainRecs: any[] = [];
   const zonefileObject = {
     $origin: domainName,
     $ttl: 3600,
@@ -108,7 +108,7 @@ export function makeUpdateZonefile(
   const submitted = [];
 
   logger.debug('Constructing zonefile: ');
-  logger.debug(zonefileObject);
+  logger.debug(zonefileObject as any);
 
   let outZonefile = makeZoneFile(zonefileObject, ZONEFILE_TEMPLATE);
   for (let i = 0; i < updates.length; i++) {
@@ -133,10 +133,10 @@ async function nameUpdate(
   name: string,
   attachment: string,
   pkey: string,
-  network
+  network: any
 ) {
   const deployedTo =
-    bskConfig.network.version === TransactionVersion.Mainnet
+    (bskConfig.network as any).version === TransactionVersion.Mainnet
       ? 'SP000000000000000000002Q6VF78'
       : 'ST000000000000000000002AMW42H';
   const txOptions = {
@@ -153,7 +153,7 @@ async function nameUpdate(
     network: network,
   };
 
-  const transaction = await makeContractCall(txOptions);
+  const transaction = await makeContractCall(txOptions as any);
 
   return transaction.serialize().toString('hex');
 }
@@ -164,6 +164,7 @@ export async function submitUpdate(
   ownerKey: string,
   paymentKey: string
 ) {
+  // @ts-ignore
   const ownerAddress = getAddressFromPrivateKey(ownerKey, bskConfig.network.version);
 
   const deconstruct = domainName.split('.');
@@ -171,6 +172,7 @@ export async function submitUpdate(
     throw new Error('Invalid domain name');
   }
 
+  // @ts-ignore
   const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + domainName;
   const nameInfoRequest = await fetch(nameInfoUrl);
   const nameInfo = await nameInfoRequest.json();
@@ -190,6 +192,7 @@ export async function submitUpdate(
       tx: txHex,
     };
 
+    // @ts-ignore
     const result = await fetch(bskConfig.network.getBroadcastApiUrl(), {
       method: 'post',
       body: JSON.stringify(body),
@@ -200,13 +203,14 @@ export async function submitUpdate(
       return parsedResponse;
     }
     throw new Error(JSON.stringify(parsedResponse));
-  } catch (err) {
+  } catch (err: any) {
     throw new Error('Error post transaction: ' + err.message);
   }
 }
 
 export async function updateGlobalBlockHeight(): Promise<void> {
   try {
+    // @ts-ignore
     const httpRequest = await fetch(bskConfig.network.getInfoUrl());
     const { status } = httpRequest;
     const response = await httpRequest.json();
@@ -221,7 +225,7 @@ export async function updateGlobalBlockHeight(): Promise<void> {
     } else {
       throw new Error(response.message);
     }
-  } catch (error) {
+  } catch (error: any) {
     throw new Error('Error fetching block height. ' + error.message);
   }
 }
@@ -232,6 +236,7 @@ async function broadcastZonefile(zonefile: string) {
     zonefile: zonefile,
   };
   try {
+    // @ts-ignore
     const result = await fetch(bskConfig.network.coreApiUrl + '/v1/zonefile', {
       method: 'post',
       body: JSON.stringify(body),
@@ -258,6 +263,7 @@ export async function checkTransactions(
     txs.map(async tx => {
       if (!tx.blockHeight || tx.blockHeight <= 0) {
         // const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
+        // @ts-ignore
         const url = new URL(bskConfig.network.coreApiUrl + `/extended/v1/tx/${tx.txHash}`);
         const httpRequest = await fetch(url);
         const txInfo = await httpRequest.json();

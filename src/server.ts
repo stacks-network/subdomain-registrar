@@ -1,6 +1,5 @@
-/* @flow */
-import logger from 'winston';
-import AsyncLock from 'async-lock';
+import * as logger from 'winston';
+import * as AsyncLock from 'async-lock';
 
 import {
   updateGlobalBlockHeight,
@@ -18,6 +17,8 @@ import {
   publicKeyFromSignature,
   publicKeyToAddress,
   AddressVersion,
+  StacksMessage,
+  createStacksPublicKey,
 } from '@stacks/transactions';
 import type { SubdomainOp } from './operations';
 import * as crypto from 'crypto';
@@ -58,15 +59,15 @@ export class SubdomainServer {
   checkCoreOnBatching: boolean;
   lastSeenBlock: number;
   minBatchSize: number;
-  regtest: ?boolean;
+  regtest: boolean;
 
   constructor(config: {
     domainName: string;
     ownerKey: string;
     paymentKey: string;
     dbLocation: string;
-    domainUri?: ?string;
-    resolverUri: ?string;
+    domainUri?: string;
+    resolverUri: string;
     zonefileSize: number;
     ipLimit: number;
     proofsRequired: number;
@@ -116,7 +117,7 @@ export class SubdomainServer {
     this.checkCoreOnBatching = config.checkCoreOnBatching;
     this.db = new RegistrarQueueDB(config.dbLocation);
     this.lock = new AsyncLock();
-    this.regtest = config.regtest;
+    this.regtest = config.regtest as any;
   }
 
   async initializeServer() {
@@ -141,8 +142,8 @@ export class SubdomainServer {
     subdomainName: string,
     owner: string,
     zonefile: string,
-    ipAddress: ?string,
-    authorization: ?string
+    ipAddress: string,
+    authorization: string
   ) {
     // the logic here is a little convoluted, because I'm trying to short-circuit
     //  the spam checks while also using Promises, which is a little tricky.
@@ -211,7 +212,7 @@ export class SubdomainServer {
           });
           return `Proofs are required: had ${proofsValid.length} valid, requires ${this.proofsRequired}`;
         }
-      } catch (err) {
+      } catch (err: any) {
         logger.error(err);
         return 'Proof validation failed';
       }
@@ -226,7 +227,7 @@ export class SubdomainServer {
     sequenceNumber: number,
     zonefile: string,
     ipAddress: string = '',
-    authorization: ?string = ''
+    authorization: string = ''
   ): Promise<void> {
     // do a quick pre-check for the subdomain name so that we can exit early in the
     //   the "non-race-condition" case.
@@ -288,7 +289,7 @@ export class SubdomainServer {
               owner,
               ip: ipAddress,
             });
-          } catch (err) {
+          } catch (err: any) {
             logger.error(`Error processing registration: ${err}`);
             logger.error(err.stack);
             throw err;
@@ -296,7 +297,7 @@ export class SubdomainServer {
         },
         { timeout: 5000 }
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err && err.message && err.message == 'async-lock timed out') {
         logger.error('Failure acquiring registration lock', {
           msgType: 'lock_acquire_fail',
@@ -314,7 +315,7 @@ export class SubdomainServer {
     if (await isSubdomainRegistered(`${subdomainName}.${this.domainName}`)) {
       return { status: 'Subdomain propagated' };
     } else {
-      const rows = await this.db.getStatusRecord(subdomainName);
+      const rows = (await this.db.getStatusRecord(subdomainName)) as any[];
 
       if (rows.length > 0) {
         const statusRecord = rows[0];
@@ -389,6 +390,7 @@ export class SubdomainServer {
                   subdomainOp.subdomainName,
                   this.domainName,
                   subdomainOp.owner,
+                  // @ts-ignore
                   parseInt(subdomainOp.sequenceNumber),
                   this.checkCoreOnBatching
                 )
@@ -449,7 +451,7 @@ export class SubdomainServer {
               txid: txHash,
             });
             return txHash;
-          } catch (err) {
+          } catch (err: any) {
             logger.error(`Failed to submit batch: ${err}`);
             logger.error(err.stack);
             throw err;
@@ -457,7 +459,7 @@ export class SubdomainServer {
         },
         { timeout: 5000 }
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err && err.message && err.message == 'async-lock timed out') {
         throw new Error('Failed to obtain lock');
       } else {
@@ -475,7 +477,7 @@ export class SubdomainServer {
       return { message: { error: 'Bad name' }, statusCode: 400 };
     }
     const subdomainName = namePieces[0];
-    const rows = await this.db.getStatusRecord(subdomainName);
+    const rows = (await this.db.getStatusRecord(subdomainName)) as any[];
 
     if (rows.length > 0) {
       const statusRecord = rows[0];
@@ -515,7 +517,7 @@ export class SubdomainServer {
           logger.debug('Obtained lock, checking transactions.');
 
           try {
-            const entries = await this.db.getTrackedTransactions();
+            const entries = (await this.db.getTrackedTransactions()) as any;
             if (entries.length > 0) {
               logger.info(`${entries.length} outstanding transactions.`, {
                 msgType: 'outstanding_tx',
@@ -532,7 +534,7 @@ export class SubdomainServer {
 
             await this.markTransactionsComplete(completed);
             logger.debug('Lock released');
-          } catch (err) {
+          } catch (err: any) {
             logger.error(`Failure trying to publish zonefiles: ${err}`);
             logger.error(err.stack);
             throw new Error(`Failed to check transaction status: ${err}`);
@@ -540,7 +542,7 @@ export class SubdomainServer {
         },
         { timeout: 5000 }
       );
-    } catch (err) {
+    } catch (err: any) {
       if (err && err.message && err.message == 'async-lock timed out') {
         throw new Error('Failed to obtain lock');
       } else {
@@ -583,19 +585,21 @@ export class SubdomainServer {
     const hash = crypto.createHash('sha256').update(textToSign).digest('hex');
 
     try {
-      const publicKey = publicKeyFromSignature(hash, { data: signature });
+      const publicKey = createStacksPublicKey(
+        publicKeyFromSignature(hash, { data: signature } as any)
+      );
       let address = '';
 
       if (this.regtest) {
-        address = publicKeyToAddress(AddressVersion.MainnetSingleSig, publicKey);
+        address = publicKeyToAddress(AddressVersion.MainnetSingleSig, publicKey as any);
       } else {
-        address = publicKeyToAddress(AddressVersion.TestnetSingleSig, publicKey);
+        address = publicKeyToAddress(AddressVersion.TestnetSingleSig, publicKey as any);
       }
 
       if (signerAddress !== address) {
-        return `signature error: '${newOwner}' has invalid signatre`;
+        return `signature error: '${newOwner}' has invalid signature`;
       }
-    } catch (error) {
+    } catch (error: any) {
       return `signature error: ${newOwner} ${error.message}`;
     }
 
@@ -608,7 +612,7 @@ export class SubdomainServer {
       new_owner: string;
       signature: string;
     }[],
-    authorization: ?string = '',
+    authorization: string = '',
     ipAddress: string = ''
   ): Promise<void> {
     if (authorization && authorization.startsWith('bearer ')) {

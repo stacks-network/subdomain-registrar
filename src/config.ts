@@ -1,7 +1,7 @@
 import { PAYER_SK, OWNER_SK, DEVELOP_DOMAIN, ADMIN_PASSWORD } from './developmode';
 import { config as bskConfig } from 'blockstack';
-import winston from 'winston';
-import fs from 'fs';
+import * as winston from 'winston';
+import * as fs from 'fs';
 
 const adminPassword = process.env.ADMIN_PASSWORD || ADMIN_PASSWORD;
 
@@ -33,7 +33,7 @@ const configDevelopDefaults = {
   disableRegistrationsWithoutKey: false,
   checkCoreOnBatching: true,
   prometheus: { start: false, port: 0 },
-};
+} as any;
 
 const configDefaults = {
   winstonConsoleTransport: {
@@ -65,10 +65,10 @@ const configDefaults = {
   nameMinLength: 1,
   prometheus: { start: false, port: 0 },
   minBatchSize: 1,
-};
+} as any;
 
 export function getConfig() {
-  let config = Object.assign({}, configDefaults);
+  let config = Object.assign({}, configDefaults) as any;
   if (process.env.BSK_SUBDOMAIN_DEVELOP) {
     config = Object.assign({}, configDevelopDefaults);
     config.development = true;
@@ -86,6 +86,7 @@ export function getConfig() {
   }
   if (process.env.BSK_SUBDOMAIN_CONFIG) {
     const configFile = process.env.BSK_SUBDOMAIN_CONFIG;
+    // @ts-ignore
     Object.assign(config, JSON.parse(fs.readFileSync(configFile)));
   }
   if (process.env.BSK_SUBDOMAIN_PAYMENT_KEY) {
@@ -102,6 +103,7 @@ export function getConfig() {
   }
   if (process.env.BLOCKSTACK_API_URL) {
     bskConfig.network.blockstackAPIUrl = process.env.BLOCKSTACK_API_URL;
+    // @ts-ignore
     bskConfig.network.coreApiUrl = process.env.BLOCKSTACK_API_URL;
   }
 

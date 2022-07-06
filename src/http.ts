@@ -1,16 +1,18 @@
-import cors from 'cors';
-import express from 'express';
-import bodyParser from 'body-parser';
-import logger from 'winston';
+import * as cors from 'cors';
+import * as express from 'express';
+import * as bodyParser from 'body-parser';
+import * as logger from 'winston';
 
 import { SubdomainServer } from './server';
 
+// @ts-ignore
 import { createMiddleware as createPrometheusMiddleware } from '@promster/express';
+// @ts-ignore
 import { createServer } from '@promster/server';
 
 const HEADERS = { 'Content-Type': 'application/json' };
 
-export function makeHTTPServer(config) {
+export function makeHTTPServer(config: any) {
   const app = express();
   const server = new SubdomainServer(config);
 
@@ -19,7 +21,7 @@ export function makeHTTPServer(config) {
       createPrometheusMiddleware({
         app,
         options: {
-          normalizePath: path => {
+          normalizePath: (path: any) => {
             if (path.startsWith('/v1/names')) {
               return '/v1/names';
             }
@@ -79,7 +81,7 @@ export function makeHTTPServer(config) {
         requestJSON.owner_address,
         0,
         requestJSON.zonefile,
-        ipAddress,
+        ipAddress as any,
         authorization
       )
       .then(() => {
@@ -174,7 +176,7 @@ export function makeHTTPServer(config) {
       };
     });
     server
-      .transferSubdomain(reqestedSubdomains, ipAddress, authorization)
+      .transferSubdomain(reqestedSubdomains, ipAddress as any, authorization)
       .then(txHash => {
         res.writeHead(202, HEADERS);
         res.write(
@@ -299,7 +301,7 @@ export function makeHTTPServer(config) {
   app.get('/list/:iterator', (req, res) => {
     // iterator must be a reasonably-sized finite positive integer
     return Promise.resolve()
-      .then(() => {
+      .then((() => {
         const iterator = req.params.iterator;
         if (!iterator.match(/^[0-9]{1,10}$/)) {
           logger.warn('List iteratotr must be a reasonably-sized positive integer');
@@ -311,7 +313,7 @@ export function makeHTTPServer(config) {
           };
         }
         return server.listSubdomainRecords(parseInt(iterator));
-      })
+      }) as any)
       .catch(e => {
         logger.error(e);
         return {
@@ -322,7 +324,7 @@ export function makeHTTPServer(config) {
           statusCode: 400,
         };
       })
-      .then(response => {
+      .then((response: any) => {
         res.writeHead(response.statusCode, HEADERS);
         res.write(JSON.stringify(response.message));
         res.end();

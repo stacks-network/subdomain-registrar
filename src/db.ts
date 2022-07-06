@@ -1,7 +1,5 @@
-/* @flow */
-
-import sqlite3 from 'sqlite3';
-import logger from 'winston';
+import * as sqlite3 from 'sqlite3';
+import * as logger from 'winston';
 const path = require('path');
 
 // eslint-disable-next-line
@@ -108,6 +106,7 @@ function isInMemory(dbPath: string) {
 
 export class RegistrarQueueDB {
   dbLocation: string;
+  // @ts-ignore
   db: sqlite3.Database;
 
   constructor(dbLocation: string) {
@@ -155,7 +154,7 @@ export class RegistrarQueueDB {
 
   tablesExist() {
     return dbAll(this.db, 'SELECT name FROM sqlite_master WHERE type = "table"').then(results => {
-      const tables = results.map(x => x.name);
+      const tables = results.map((x: any) => x.name);
       const toCreate = [];
       if (tables.indexOf('subdomain_queue') < 0) {
         toCreate.push(CREATE_QUEUE);
@@ -223,7 +222,7 @@ export class RegistrarQueueDB {
     const lookup = `SELECT queue_ix FROM subdomain_queue WHERE subdomainName = ?
                     AND owner = ? AND sequenceNumber = 1`;
     const insert = 'INSERT INTO ip_info (ip_address, owner, queue_ix) VALUES (?, ?, ?)';
-    return dbAll(this.db, lookup, [subdomainName, ownerAddress]).then(results => {
+    return dbAll(this.db, lookup, [subdomainName, ownerAddress]).then((results: any[]) => {
       if (results.length != 1) {
         throw new Error('No queued entry found.');
       }
@@ -246,7 +245,7 @@ export class RegistrarQueueDB {
     const lookup = `SELECT queue_ix FROM subdomain_queue WHERE subdomainName = ?
                     AND owner = ? AND sequenceNumber = 0`;
     const insert = 'INSERT INTO ip_info (ip_address, owner, queue_ix) VALUES (?, ?, ?)';
-    return dbAll(this.db, lookup, [subdomainName, ownerAddress]).then(results => {
+    return dbAll(this.db, lookup, [subdomainName, ownerAddress]).then((results: any[]) => {
       if (results.length != 1) {
         throw new Error('No queued entry found.');
       }
@@ -275,7 +274,7 @@ export class RegistrarQueueDB {
       sequenceNumber: string;
       zonefile: string;
       signature: string;
-    }[] = await dbAll(this.db, cmd);
+    }[] = (await dbAll(this.db, cmd)) as any[];
     return results.map(x => {
       const out = {
         subdomainName: x.subdomainName,
@@ -301,7 +300,7 @@ export class RegistrarQueueDB {
       ' FROM subdomain_queue' +
       ' WHERE subdomainName = ? ORDER BY queue_ix DESC LIMIT 1';
 
-    const result = await dbAll(this.db, lookup, [subdomainName]);
+    const result: any = await dbAll(this.db, lookup, [subdomainName]);
 
     if (result.length != 1) {
       throw new Error('no subdomain found');
@@ -330,7 +329,7 @@ export class RegistrarQueueDB {
       signature: string;
       status: string;
       queue_ix: number;
-    }[] = await dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE]);
+    }[] = (await dbAll(this.db, listSQL, [iterator, timeLimit, SUBDOMAIN_PAGE_SIZE])) as any[];
     return results.map(x => {
       const out = {
         subdomainName: x.subdomainName,
@@ -402,6 +401,7 @@ export class RegistrarQueueDB {
           resolve();
         }
       });
+      // @ts-ignore
       this.db = undefined;
     });
   }

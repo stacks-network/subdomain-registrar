@@ -2,10 +2,11 @@ import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'b
 import { validateStacksAddress } from '@stacks/transactions';
 import fetch from 'node-fetch';
 
-import logger from 'winston';
+import * as logger from 'winston';
 
 export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
   try {
+    // @ts-ignore
     const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + fullyQualifiedAddress;
     const nameInfoRequest = await fetch(nameInfoUrl);
     const { status } = nameInfoRequest;
@@ -15,7 +16,7 @@ export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
     } else {
       return false;
     }
-  } catch (err) {
+  } catch (err: any) {
     if (err.message === 'Name not found') {
       return false;
     } else if (err.message === 'Bad response status: 500') {
@@ -30,10 +31,13 @@ export function validlySignedUpdate() {
   throw new Error('Not implemented');
 }
 
-export function checkProofs(owner, zonefile) {
-  return resolveZoneFileToProfile(zonefile, owner)
-    .then(profile => validateProofs(profile, owner))
-    .then(proofs => proofs.filter(x => x.valid));
+export function checkProofs(owner: any, zonefile: any) {
+  return (
+    resolveZoneFileToProfile(zonefile, owner)
+      // @ts-ignore
+      .then(profile => validateProofs(profile, owner))
+      .then(proofs => proofs.filter(x => x.valid))
+  );
 }
 
 export async function isRegistrationValid(
@@ -50,14 +54,14 @@ export async function isRegistrationValid(
   }
 
   // owner should be a stacks address
-  if (!validateStacksAddress(owner)) {
+  if (!validateStacksAddress(owner as any)) {
     logger.debug(`owner: ${owner} failed validation`);
     return false;
   }
 
   // subdomain name should be a legal name
   const subdomainRegex = /^[a-z0-9\-_+]{1,37}$/;
-  if (!subdomainRegex.test(subdomainName)) {
+  if (!subdomainRegex.test(subdomainName as any)) {
     logger.debug(`subdomainName: ${subdomainName} failed validation`);
     return false;
   }
@@ -72,7 +76,7 @@ export async function isRegistrationValid(
       logger.warn(`${subdomainName}.${domainName} already exists`);
     }
     return !isRegistered;
-  } catch (e) {
+  } catch (e: any) {
     logger.error(e);
     return false;
   }
