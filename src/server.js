@@ -619,7 +619,9 @@ export class SubdomainServer {
     const hash = crypto.createHash('sha256').update(textToSign).digest('hex')
 
     try {
-      const publicKey = publicKeyFromSignature(hash, { data: signature })
+      const publicKey = {
+        data: publicKeyFromSignature(hash, { data: signature })
+      }
       let address = ''
 
       if (this.regtest) {
