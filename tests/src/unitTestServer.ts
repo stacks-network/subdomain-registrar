@@ -1,5 +1,6 @@
-import test from 'tape';
-import nock from 'nock';
+// @ts-nocheck
+import * as test from 'tape';
+import * as nock from 'nock';
 
 import { SubdomainServer } from '../../lib/server';
 const bns = require('./../bns.json');
@@ -10,7 +11,7 @@ const testAddress3 = 'ST3CECAKJ4BH08JYY7W53MC81BYDT4YDA5M7S5F53';
 const testSK = 'b8d99fd45da58038d630d9855d3ca2466e8e0f89d3894c4724f0efc9ff4b51f001';
 const testSK2 = '3a4e84abb8abe0c1ba37cef4b604e73c82b1fe8d99015cb36b029a65099d373601';
 
-function dbRun(db: Object, cmd: String, args?: Array) {
+function dbRun(db: any, cmd: String, args?: any[]) {
   if (!args) {
     args = [];
   }
@@ -19,6 +20,7 @@ function dbRun(db: Object, cmd: String, args?: Array) {
       if (err) {
         reject(err);
       } else {
+        // @ts-ignore
         resolve();
       }
     });
@@ -214,7 +216,7 @@ export function testSubdomainServer() {
       .then(() =>
         // past the iterator.
         s
-          .listSubdomainRecords(parseInt(2))
+          .listSubdomainRecords(parseInt('2'))
           .then(listing => listing.message)
           .then(listing => t.equal(listing.length, 0, 'Should list 0 subdomains'))
       )
@@ -373,6 +375,7 @@ export function testSubdomainServer() {
 
     const acquiredWait = s.lock.acquire('queue', () => {
       return new Promise(resolve => {
+        // @ts-ignore
         setTimeout(() => resolve(), 9000);
       });
     });
@@ -568,6 +571,7 @@ export function testSubdomainServer() {
 
     const acquiredWait = s.lock.acquire('queue', () => {
       return new Promise(resolve => {
+        // @ts-ignore
         setTimeout(() => resolve(), 9000);
       });
     });
@@ -592,6 +596,7 @@ export function testSubdomainServer() {
 
     const acquiredWait1 = s.lock.acquire('queue', () => {
       return new Promise(resolve => {
+        // @ts-ignore
         setTimeout(() => resolve(), 3000);
       });
     });

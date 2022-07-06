@@ -1,5 +1,6 @@
-import test from 'tape';
-import nock from 'nock';
+// @ts-nocheck
+import * as test from 'tape';
+import * as nock from 'nock';
 
 import {
   destructZonefile,
@@ -179,6 +180,7 @@ export function unitTestOperations() {
     const updatesArray2 = [];
     for (let i = 0; i < 20; i++) {
       updatesArray2.push(
+        // @ts-ignore
         Object.assign({}, subdomainOp, { subdomainName: `${subdomainName}-${i}` })
       );
     }

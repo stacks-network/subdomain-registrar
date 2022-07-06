@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { isSubdomainRegistered, isRegistrationValid, validlySignedUpdate } from '../../lib/lookups';
-import test from 'tape';
-import nock from 'nock';
+import * as test from 'tape';
+import * as nock from 'nock';
 
 const testAddress = 'ST2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7G9Y0X1MH';
 
