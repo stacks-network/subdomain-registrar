@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "commonjs",
+        // "moduleResolution": "node",
+        "declaration": false,
+        "strict": true,
+        "sourceMap": true,
+        "esModuleInterop": false,
+        "allowSyntheticDefaultImports": false,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "outDir": "tests/lib",
+        "baseUrl": ".",
+    },
+    "include": [
+        "tests/src/**/*"
+    ],
+    "exclude": [
+        "lib",
+        "node_modules"
+    ]
+}
