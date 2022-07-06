@@ -1,7 +1,18 @@
 {
-  "presets": [ 
-    [ "@babel/preset-env",
-     { "targets": { "node": 12 } } ],
-    "@babel/preset-flow"],
-  "plugins": ["istanbul"]
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": 12
+        }
+      }
+    ],
+    "@babel/preset-flow"
+  ],
+  "plugins": [
+    "istanbul"
+  ],
+  "sourceMaps": "inline",
+  "retainLines": true
 }
