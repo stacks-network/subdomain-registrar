@@ -2,6 +2,7 @@ import test from 'tape'
 import nock from 'nock'
 
 import { SubdomainServer } from '../../lib/server'
+
 const bns = require('./../bns.json')
 
 const testAddress = 'SP2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7GB36ZAR0'
@@ -455,6 +456,49 @@ export function testSubdomainServer() {
     }
   })
 
+  // test('transfer subdomain', async (t) => {
+  //   t.plan(1)
+
+  //   const dataPrivateKey = '19abea8ca46ccd54c75db9539bafd8fb7cf2d093ef7d5e96ba95cd3cf13b9ca401'
+  //   const stxPrivateKey = '5c636f1b631e6f11fc5d7eacc422311fc7d3707a075842de6e6afefd4b88fa6101'
+
+  //   const dataKeyAddress = getAddressFromPrivateKey(
+  //     account.dataPrivateKey,
+  //     TransactionVersion.Mainnet
+  //   ) // source
+  //   const stxKeyAddress = getAddressFromPrivateKey(
+  //     account.stxPrivateKey,
+  //     TransactionVersion.Mainnet
+  //   ) // target
+
+  //   const zonefile =
+  //     "$ORIGIN test_migration_01.id.stx\n" +
+  //     "$TTL 3600\n" +
+  //     '_http._tcp\tIN\tURI\t10\t1\t"https://gaia.blockstack.org/hub/1AkxYBm1bu7hNxoemrtz1LzYpszJ2pAGyg/profile.json"\n' +
+  //     "\n"
+
+  //   const s = new SubdomainServer({
+  //     domainName: 'bar.id',
+  //     ownerKey: testSK,
+  //     paymentKey: testSK2,
+  //     dbLocation: ':memory:',
+  //     zonefileSize: 4096,
+  //     checkCoreOnBatching: true,
+  //     ipLimit: 0,
+  //     proofsRequired: 0,
+  //     domainUri: 'http://myfreewebsite.com'
+  //   })
+  //   await s.initializeServer()
+
+  //   // todo: continue
+
+  //   s.transferSubdomain({ subdomainName: 'test_migration_01', new_owner: '', signature: '' })
+  //     .then(() => {
+
+  //     })
+
+  // })
+
   test('submitBatch not owned', async (t) => {
     t.plan(12)
     nock.cleanAll()
@@ -577,16 +621,16 @@ export function testSubdomainServer() {
 
     let x = await s.getSubdomainStatus('bar')
     t.ok(x.status.startsWith('Subdomain is queued'),
-      `bar.bar.id should still be queued for update`)
+      'bar.bar.id should still be queued for update')
     x = await s.getSubdomainStatus('foo')
     t.ok(x.status.startsWith('Subdomain is queued'),
-      `foo.bar.id should still be queued for update`)
+      'foo.bar.id should still be queued for update')
 
     // now, let's try to _force_ the subdomain registrar into a failure state
     //  which _used_ to be possible, but now isn't due to the locking isSubdomainInQueue check.
 
-    s.isSubdomainInQueue = async () => { return false };
-    s.spamCheck = async () => { return false };
+    s.isSubdomainInQueue = async () => { return false }
+    s.spamCheck = async () => { return false }
 
     try {
       await s.queueRegistration('alice', testAddress3, 0, 'hello-world')

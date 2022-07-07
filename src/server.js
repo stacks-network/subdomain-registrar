@@ -611,10 +611,13 @@ export class SubdomainServer {
     }
 
     const signerAddress = subdomainOp.owner
-    subdomainOp.owner = newOwner
-    subdomainOp.sequenceNumber = subdomainOp.sequenceNumber + 1
 
-    const subdomainPieces = subdomainOpToZFPieces(subdomainOp)
+    const newSubdomainOp = {
+      ...subdomainOp, owner: newOwner,
+      sequenceNumber: 1, // seqn is unknown to transfer initiator
+      signature: undefined // sig should NOT be included in hash
+    }
+    const subdomainPieces = subdomainOpToZFPieces(newSubdomainOp)
     const textToSign = subdomainPieces.txt.join(',')
     const hash = crypto.createHash('sha256').update(textToSign).digest('hex')
 
@@ -624,8 +627,8 @@ export class SubdomainServer {
       }
       const addressVersion = process.env.BSK_SUBDOMAIN_TESTNET
         ? AddressVersion.TestnetSingleSig
-        : AddressVersion.MainnetSingleSig;
-      const address = publicKeyToAddress(addressVersion, publicKey);
+        : AddressVersion.MainnetSingleSig
+      const address = publicKeyToAddress(addressVersion, publicKey)
 
       if (signerAddress !== address) {
         return `signature error: '${newOwner}' has invalid signature`
@@ -666,13 +669,13 @@ export class SubdomainServer {
       const subdomainDb = await this.db.getSubdomainRecord(
         requestedSubdomains[i].subdomainName
       )
-      const isValid = await this.validateTransferSubdomain(
+      const hasErrors = await this.validateTransferSubdomain(
         subdomainDb,
         requestedSubdomains[i].new_owner,
         requestedSubdomains[i].signature
       )
-      if (isValid) {
-        throw new Error(isValid)
+      if (hasErrors) {
+        throw new Error(hasErrors)
       }
       const newSubdomain = {
         ...subdomainDb,
