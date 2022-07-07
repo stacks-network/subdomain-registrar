@@ -613,7 +613,8 @@ export class SubdomainServer {
     const signerAddress = subdomainOp.owner
 
     const newSubdomainOp = {
-      ...subdomainOp, owner: newOwner,
+      ...subdomainOp,
+      owner: newOwner,
       sequenceNumber: 1, // seqn is unknown to transfer initiator
       signature: undefined // sig should NOT be included in hash
     }
@@ -623,7 +624,7 @@ export class SubdomainServer {
 
     try {
       const publicKey = {
-        data: publicKeyFromSignature(hash, { data: signature })
+        data: Buffer.from(publicKeyFromSignature(hash, { data: signature }), 'hex')
       }
       const addressVersion = process.env.BSK_SUBDOMAIN_TESTNET
         ? AddressVersion.TestnetSingleSig
@@ -631,7 +632,7 @@ export class SubdomainServer {
       const address = publicKeyToAddress(addressVersion, publicKey)
 
       if (signerAddress !== address) {
-        return `signature error: '${newOwner}' has invalid signature`
+        return `signature error: current owner '${signerAddress}' does not match initiator '${address}'`
       }
     } catch (error) {
       return `signature error: ${newOwner} ${error.message}`
