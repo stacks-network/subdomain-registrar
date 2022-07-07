@@ -622,22 +622,13 @@ export class SubdomainServer {
       const publicKey = {
         data: publicKeyFromSignature(hash, { data: signature })
       }
-      let address = ''
-
-      if (this.regtest) {
-        address = publicKeyToAddress(
-          AddressVersion.MainnetSingleSig,
-          publicKey
-        )
-      } else {
-        address = publicKeyToAddress(
-          AddressVersion.TestnetSingleSig,
-          publicKey
-        )
-      }
+      const addressVersion = process.env.BSK_SUBDOMAIN_TESTNET
+        ? AddressVersion.TestnetSingleSig
+        : AddressVersion.MainnetSingleSig;
+      const address = publicKeyToAddress(addressVersion, publicKey);
 
       if (signerAddress !== address) {
-        return `signature error: '${newOwner}' has invalid signatre`
+        return `signature error: '${newOwner}' has invalid signature`
       }
     } catch (error) {
       return `signature error: ${newOwner} ${error.message}`

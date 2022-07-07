@@ -58,8 +58,10 @@ typings/
 # dotenv environment variables file
 .env
 
+.DS_Store
 data
 lib
 tests/lib
 .vscode
 package-lock.json
+*.db
