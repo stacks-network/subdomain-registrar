@@ -576,31 +576,40 @@ export class SubdomainServer {
       return `'${newOwner}' is not a valid stx address`;
     }
 
-    const signerAddress = subdomainOp.owner;
-    subdomainOp.owner = newOwner;
-    subdomainOp.sequenceNumber = subdomainOp.sequenceNumber + 1;
+    // clone original record (migration only overrides `owner` and `seqn`)
+    const newSubdomainRecord = {
+      ...subdomainOp,
+      owner: newOwner,
+      sequenceNumber: 1, // transfer doesn't know about current seqn
+    };
 
-    const subdomainPieces = subdomainOpToZFPieces(subdomainOp);
-    const textToSign = subdomainPieces.txt.join(',');
-    const hash = crypto.createHash('sha256').update(textToSign).digest('hex');
-
-    try {
+    function addressFromSignature(hash: string, signature: string) {
       const publicKey = createStacksPublicKey(
         publicKeyFromSignature(hash, { data: signature } as any)
       );
-      let address = '';
+      const addressVersion = process.env.BSK_SUBDOMAIN_TESTNET
+        ? AddressVersion.TestnetSingleSig
+        : AddressVersion.MainnetSingleSig;
+      return publicKeyToAddress(addressVersion, publicKey as any);
+    }
 
-      if (this.regtest) {
-        address = publicKeyToAddress(AddressVersion.MainnetSingleSig, publicKey as any);
-      } else {
-        address = publicKeyToAddress(AddressVersion.TestnetSingleSig, publicKey as any);
-      }
+    function hashSubdomainOp(subdomainOp: SubdomainOp) {
+      const subdomainPieces = subdomainOpToZFPieces({
+        ...subdomainOp,
+        signature: undefined,
+      } as any);
+      const textToSign = subdomainPieces.txt.join(',');
+      return crypto.createHash('sha256').update(textToSign).digest('hex');
+    }
 
-      if (signerAddress !== address) {
-        return `signature error: '${newOwner}' has invalid signature`;
+    try {
+      // check that signature (and thus transfer request) comes from original owner
+      const incomingSigner = addressFromSignature(hashSubdomainOp(newSubdomainRecord), signature);
+      if (incomingSigner !== subdomainOp.owner) {
+        return `validation error: ${incomingSigner} is not current owner`;
       }
     } catch (error: any) {
-      return `signature error: ${newOwner} ${error.message}`;
+      return `validation error: ${newOwner} ${error.message}`;
     }
 
     return false;
