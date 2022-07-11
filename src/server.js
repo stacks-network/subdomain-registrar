@@ -682,7 +682,7 @@ export class SubdomainServer {
         ...subdomainDb,
         owner: requestedSubdomains[i].new_owner,
         signature: requestedSubdomains[i].signature,
-        sequenceNumber: subdomainDb.sequenceNumber + 1
+        sequenceNumber: 1 // reset seqn for transfer
       }
       subdomainRecords.push(newSubdomain)
     }
