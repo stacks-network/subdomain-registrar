@@ -214,27 +214,24 @@ export class RegistrarQueueDB {
     return dbRun(this.db, dbCmd, dbArgs)
   }
 
-  makeTransferUpdates(
+  async makeTransferUpdates(
     transferedSubdomains: QueueRecord[],
     txHash: string
   ): Promise<void> {
     const dbCmd =
       'INSERT INTO subdomain_queue ' +
-      '(subdomainName, owner, sequenceNumber, zonefile, signature,  status, status_more) VALUES ?'
+      '(subdomainName, owner, sequenceNumber, zonefile, signature, status, status_more) VALUES ' +
+      '(?, ?, ?, ?, ?, ?, ?)'
 
-    const dbArgs = transferedSubdomains.map((subdomain) => {
-      return [
-        subdomain.subdomainName,
-        subdomain.owner,
-        subdomain.sequenceNumber,
-        subdomain.zonefile,
-        subdomain.signature,
-        'submitted',
-        txHash
-      ]
-    })
-
-    return dbRun(this.db, dbCmd, [dbArgs])
+    Promise.all(transferedSubdomains.map((subdomain) => dbRun(this.db, dbCmd, [
+      subdomain.subdomainName,
+      subdomain.owner,
+      subdomain.sequenceNumber,
+      subdomain.zonefile,
+      subdomain.signature,
+      'submitted',
+      txHash
+    ])))
   }
 
   logTransferRequestorData(

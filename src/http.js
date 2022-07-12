@@ -171,7 +171,7 @@ export function makeHTTPServer(config) {
         new_owner: subdomain.owner,
         signature: subdomain.signature
       }
-    })      
+    })
     server
     .transferSubdomain(reqestedSubdomains, ipAddress, authorization)
     .then((txHash) => {
