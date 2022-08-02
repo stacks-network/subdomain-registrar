@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.3...v1.2.0) (2022-08-02)
+
+
+### Features
+
+* transfer existing subdomains to new addresses ([#88](https://github.com/stacks-network/subdomain-registrar/issues/88)) ([0bf15a6](https://github.com/stacks-network/subdomain-registrar/commit/0bf15a63a46b17af66aca54f9927925367f23f57))
+
 ## [1.1.3](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.2...v1.1.3) (2022-05-02)
 
 
