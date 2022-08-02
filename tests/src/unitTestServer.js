@@ -1,7 +1,11 @@
-import test from 'tape'
+import crypto from 'crypto'
 import nock from 'nock'
+import test from 'tape'
 
+import { createStacksPrivateKey, getAddressFromPrivateKey, signWithKey, TransactionVersion } from '@stacks/transactions'
+import { subdomainOpToZFPieces } from '../../lib/operations'
 import { SubdomainServer } from '../../lib/server'
+
 const bns = require('./../bns.json')
 
 const testAddress = 'SP2ZRX0K27GW0SP3GJCEMHD95TQGJMKB7GB36ZAR0'
@@ -577,16 +581,16 @@ export function testSubdomainServer() {
 
     let x = await s.getSubdomainStatus('bar')
     t.ok(x.status.startsWith('Subdomain is queued'),
-      `bar.bar.id should still be queued for update`)
+      'bar.bar.id should still be queued for update')
     x = await s.getSubdomainStatus('foo')
     t.ok(x.status.startsWith('Subdomain is queued'),
-      `foo.bar.id should still be queued for update`)
+      'foo.bar.id should still be queued for update')
 
     // now, let's try to _force_ the subdomain registrar into a failure state
     //  which _used_ to be possible, but now isn't due to the locking isSubdomainInQueue check.
 
-    s.isSubdomainInQueue = async () => { return false };
-    s.spamCheck = async () => { return false };
+    s.isSubdomainInQueue = async () => { return false }
+    s.spamCheck = async () => { return false }
 
     try {
       await s.queueRegistration('alice', testAddress3, 0, 'hello-world')
@@ -595,5 +599,103 @@ export function testSubdomainServer() {
       t.equal((await s.getSubdomainStatus('alice')).status, 'Error logging ip info')
       t.equal(err.message, 'No queued entry found.')
     }
+  })
+
+  test('transfer subdomain', async (t) => {
+    t.plan(5)
+    nock.cleanAll()
+
+    const dataPrivateKey = '19abea8ca46ccd54c75db9539bafd8fb7cf2d093ef7d5e96ba95cd3cf13b9ca401'
+    const stxPrivateKey = '5c636f1b631e6f11fc5d7eacc422311fc7d3707a075842de6e6afefd4b88fa6101'
+
+    const dataKeyAddress = getAddressFromPrivateKey(dataPrivateKey, TransactionVersion.Mainnet) // source
+    const stxKeyAddress = getAddressFromPrivateKey(stxPrivateKey, TransactionVersion.Mainnet) // target
+
+    const zonefile =
+      "$ORIGIN test_migration_01.id.stx\n" +
+      "$TTL 3600\n" +
+      '_http._tcp\tIN\tURI\t10\t1\t"https://gaia.blockstack.org/hub/1AkxYBm1bu7hNxoemrtz1LzYpszJ2pAGyg/profile.json"\n' +
+      "\n"
+
+    const subdomainTransfer = {
+      owner: stxKeyAddress,
+      subdomainName: 'test_migration_01',
+      sequenceNumber: 1,
+      zonefile
+    }
+
+    const subdomainPieces = subdomainOpToZFPieces(subdomainTransfer)
+    const textToSign = subdomainPieces.txt.join(',')
+    const hash = crypto.createHash('sha256').update(textToSign).digest('hex')
+
+    subdomainTransfer.signature = signWithKey(createStacksPrivateKey(dataPrivateKey), hash).data
+
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .persist()
+      .get('/v1/names/id.stx')
+      .reply(200, { address: testAddress }) // owner of registrar/domain
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/info')
+      .times(1)
+      .reply(200, { burn_block_height: 310 })
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/contracts/interface/SP000000000000000000002Q6VF78/bns')
+      .times(2)
+      .reply(200, bns)
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/fees/transfer')
+      .times(2)
+      .reply(200, 1)
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .get('/v2/accounts/SP26FVX16539KKXZKJN098Q08HRX3XBAP55F6QR13?proof=0')
+      .times(2)
+      .reply(200, {
+        balance: '0x00000000000000000000000000000000',
+        locked: '0x00000000000000000000000000000000',
+        unlock_height: 0,
+        nonce: 0,
+        balance_proof: '',
+        nonce_proof: ''
+      })
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .post('/v2/transactions')
+      .reply(200, '"ab5378426571ba323d40d540cdb1a01ce7c2e9452a89d11b242a39269c5bf21f"')
+
+    nock('https://stacks-node-api.mainnet.stacks.co')
+      .persist()
+      .get('/v1/names/test_migration_01.id.stx')
+      .reply(200, { address: dataKeyAddress })
+
+    const s = new SubdomainServer({
+      domainName: 'id.stx',
+      ownerKey: testSK,
+      paymentKey: testSK2,
+      dbLocation: ':memory:',
+      zonefileSize: 4096,
+      checkCoreOnBatching: true,
+      ipLimit: 0,
+      proofsRequired: 0,
+      domainUri: 'http://myfreewebsite.com'
+    })
+
+    await s.initializeServer()
+      .then(() => s.queueRegistration('test_migration_01', dataKeyAddress, 0, zonefile, 'ip-address')
+        .then(() => t.ok(true, 'should add test subdomain'))
+        .catch(() => t.ok(false, 'should add test subdomain')))
+      .then(() => s.getSubdomainStatus('test_migration_01')
+        .then((x) => t.ok(x.status.startsWith('Subdomain is queued'), 'should get')))
+        .catch(() => t.ok(false, 'should get'))
+      .then(() => s.getSubdomainInfo('test_migration_01.id.stx')
+        .then((x) => t.equal(x.message.address, dataKeyAddress)))
+        .catch(() => t.ok(false, 'should be owned by target'))
+      .then(() => s.transferSubdomain([{
+          subdomainName: 'test_migration_01', new_owner: stxKeyAddress, signature: subdomainTransfer.signature
+        }])
+        .then(() => t.ok(true, 'should transfer'))
+        .catch(() => t.ok(false, 'should transfer')))
+      .then(() => new Promise(r => setTimeout(r, 1000)))
+      .then(() => s.getSubdomainInfo('test_migration_01.id.stx')
+        .then((x) => t.equal(x.message.address, stxKeyAddress)))
+        .catch(() => t.ok(false, 'should be owned by target'))
   })
 }
