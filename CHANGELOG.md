@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/stacks-network/subdomain-registrar/compare/v1.2.0...v1.2.1) (2023-03-27)
+
+
+### Bug Fixes
+
+* avoid `/extended/v1/tx/<txid>` request that must follow redirects ([#96](https://github.com/stacks-network/subdomain-registrar/issues/96)) ([54a52c4](https://github.com/stacks-network/subdomain-registrar/commit/54a52c4ed9523e13f5be80c58d20d3a6d78542c7))
+
 # [1.2.0](https://github.com/stacks-network/subdomain-registrar/compare/v1.1.3...v1.2.0) (2022-08-02)
 
 
