@@ -270,7 +270,14 @@ export async function checkTransactions(
           bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
         );
         const httpRequest = await fetch(url);
-        const txInfo = await httpRequest.json();
+        const reqText = await httpRequest.text();
+        let txInfo;
+        try {
+          txInfo = JSON.parse(reqText);
+        } catch (error) {
+          logger.error(`Error parsing JSON from ${url} ${error}, received: ${reqText}`);
+          throw error;
+        }
 
         if (!txInfo.block_height) {
           logger.info("Could not get block_height, probably unconfirmed.", {
