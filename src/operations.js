@@ -275,7 +275,7 @@ export async function checkTransactions(
         try {
           txInfo = JSON.parse(reqText);
         } catch (error) {
-          logger.error(`Error parsing JSON from ${url} ${error}, received: ${reqText}`);
+          logger.error(`Error parsing JSON from ${url.toString()} ${error}, received: ${reqText}`);
           throw error;
         }
 
