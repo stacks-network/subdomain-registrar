@@ -267,7 +267,7 @@ export async function checkTransactions(
       if (!tx.blockHeight || tx.blockHeight <= 0) {
         // const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
         const url = new URL(
-          bskConfig.network.coreApiUrl + `/extended/v1/tx/${tx.txHash}`
+          bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
         );
         const httpRequest = await fetch(url);
         const txInfo = await httpRequest.json();

@@ -414,7 +414,7 @@ export function testSubdomainServer() {
 
     nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
-      .get(`/extended/v1/tx/${expected_tx}`)
+      .get(`/extended/v1/tx/0x${expected_tx}`)
       .reply(200, { block_height: 300 })
 
     await s.checkZonefiles() //todo

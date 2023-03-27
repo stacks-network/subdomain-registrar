@@ -122,7 +122,7 @@ export function unitTestOperations() {
 
     txs.forEach(x => nock('https://stacks-node-api.mainnet.stacks.co')
       .persist()
-      .get(`/extended/v1/tx/${x.txHash}`)
+      .get(`/extended/v1/tx/0x${x.txHash}`)
       .reply(200, { block_height: x.blockheight }))
 
     // nock('https://stacks-node-api.mainnet.stacks.co')
