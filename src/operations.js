@@ -269,16 +269,22 @@ export async function checkTransactions(
         const url = new URL(
           bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
         );
-        const httpRequest = await fetch(url);
-        const reqText = await httpRequest.text();
         let txInfo;
         try {
-          txInfo = JSON.parse(reqText);
+          const httpRequest = await fetch(url);
+          const reqText = await httpRequest.text();
+          if (!httpRequest.ok)
+            throw new Error(`HTTP request not ok: ${httpRequest.status} ${reqText}`);
+          try {
+            txInfo = JSON.parse(reqText);
+          } catch (error) {
+            logger.error(`Error parsing JSON: ${error}, received: ${reqText}`);
+            throw error;
+          }
         } catch (error) {
-          logger.error(`Error parsing JSON from ${url.toString()} ${error}, received: ${reqText}`);
+          logger.error(`Error checking transaction at ${url.toString()}: ${error}`);
           throw error;
         }
-
         if (!txInfo.block_height) {
           logger.info("Could not get block_height, probably unconfirmed.", {
             msgType: "unconfirmed",
