@@ -15,7 +15,7 @@
     "cors": "^2.8.4",
     "crypto": "^1.0.1",
     "express": "^4.16.2",
-    "node-fetch": "^2.6.7",
+    "node-fetch": "^2.7.0",
     "prom-client": "^11.5.3",
     "ripemd160": "^2.0.1",
     "sqlite3": "^5.0.2",
