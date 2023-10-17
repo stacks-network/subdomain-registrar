@@ -173,14 +173,17 @@ export async function submitUpdate(
   }
 
   const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + domainName
-  const nameInfoRequest = await fetch(nameInfoUrl)
-  const nameInfo = await nameInfoRequest.json()
-
-  if (nameInfo.address !== ownerAddress) {
-    throw new Error(
-      `Domain name ${domainName} not owned by address ${ownerAddress}`
-    )
-  } // owner validated
+  try {
+    const nameInfoRequest = await axios.get(nameInfoUrl)
+    if (nameInfoRequest.data.address !== ownerAddress) {
+      throw new Error(
+        `Domain name ${domainName} not owned by address ${ownerAddress}`
+      )
+    }
+  } catch (error) {
+    logger.error(`Submit update name info failed ${nameInfoUrl}: ${error}`)
+    throw error
+  }
 
   const name = deconstruct[0]
   const namespace = deconstruct[1]
