@@ -364,4 +364,7 @@ export function makeHTTPServer(config) {
       }, zonefileDelay)
     })
     .then(() => app)
+    .catch(error => {
+      logger.error(`Unable to start server: ${error}`)
+    })
 }
