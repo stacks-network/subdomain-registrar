@@ -218,8 +218,9 @@ export async function submitUpdate(
 }
 
 export async function updateGlobalBlockHeight(): Promise<void> {
+  const url = bskConfig.network.getInfoUrl()
   try {
-    const response = await axios.get(bskConfig.network.getInfoUrl())
+    const response = await axios.get(url)
     const blockHeight = response.data.burn_block_height
     if (SERVER_GLOBALS.lastSeenBlockHeight > blockHeight) {
       throw new Error(
@@ -228,7 +229,7 @@ export async function updateGlobalBlockHeight(): Promise<void> {
     }
     SERVER_GLOBALS.lastSeenBlockHeight = blockHeight
   } catch (error) {
-    throw new Error('Error fetching block height. ' + error.message)
+    throw new Error(`Error fetching block height from ${url}: ${error}`)
   }
 }
 

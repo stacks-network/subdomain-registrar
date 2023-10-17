@@ -47,4 +47,6 @@ initializationPromise.then((server) => {
   server.listen(config.port, () => {
     console.log('Subdomain registrar started on', config.port)
   })
+}).catch(error => {
+  winston.error(`Unable to initialize subdomain registrar: ${error}`)
 })
