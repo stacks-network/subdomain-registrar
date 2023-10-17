@@ -5,6 +5,7 @@ import { SERVER_GLOBALS } from './server'
 import { makeZoneFile } from 'zone-file'
 import logger from 'winston'
 import fetch from 'node-fetch'
+import axios from 'axios'
 import { crypto } from 'bitcoinjs-lib'
 import RIPEMD160 from 'ripemd160'
 
@@ -215,19 +216,14 @@ export async function submitUpdate(
 
 export async function updateGlobalBlockHeight(): Promise<void> {
   try {
-    const httpRequest = await fetch(bskConfig.network.getInfoUrl())
-    const response = await httpRequest.json()
-    if (httpRequest.status == 200) {
-      const blockHeight = response.burn_block_height
-      if (SERVER_GLOBALS.lastSeenBlockHeight > blockHeight) {
-        throw new Error(
-          `Last seen block ${SERVER_GLOBALS.lastSeenBlockHeight} is greater than returned block height ${blockHeight}`
-        )
-      }
-      SERVER_GLOBALS.lastSeenBlockHeight = blockHeight
-    } else {
-      throw new Error(response.message)
+    const response = await axios.get(bskConfig.network.getInfoUrl())
+    const blockHeight = response.data.burn_block_height
+    if (SERVER_GLOBALS.lastSeenBlockHeight > blockHeight) {
+      throw new Error(
+        `Last seen block ${SERVER_GLOBALS.lastSeenBlockHeight} is greater than returned block height ${blockHeight}`
+      )
     }
+    SERVER_GLOBALS.lastSeenBlockHeight = blockHeight
   } catch (error) {
     throw new Error('Error fetching block height. ' + error.message)
   }
@@ -243,34 +239,22 @@ export async function checkTransactions(
   return await Promise.all(
     txs.map(async (tx) => {
       if (!tx.blockHeight || tx.blockHeight <= 0) {
-        // const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
-        const url = new URL(
-          bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
-        )
-        let txInfo
+        const txUrl = bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
         try {
-          const httpRequest = await fetch(url)
-          const reqText = await httpRequest.text()
-          if (!httpRequest.ok)
-            throw new Error(`HTTP request not ok: ${httpRequest.status} ${reqText}`)
-          try {
-            txInfo = JSON.parse(reqText)
-          } catch (error) {
-            logger.error(`Error parsing JSON: ${error}, received: ${reqText}`)
-            throw error
+          const txResponse = await axios.get(txUrl)
+          const txInfo = txResponse.data
+          if (!txInfo.block_height) {
+            logger.info('Could not get block_height, probably unconfirmed.', {
+              msgType: 'unconfirmed',
+              txid: tx.txHash
+            })
+            return { txHash: tx.txHash, status: false, blockHeight: -1 }
+          } else {
+            tx.blockHeight = txInfo.block_height
           }
         } catch (error) {
-          logger.error(`Error checking transaction at ${url.toString()}: ${error}`)
+          logger.error(`Error checking transaction at ${txUrl}: ${error}`)
           throw error
-        }
-        if (!txInfo.block_height) {
-          logger.info('Could not get block_height, probably unconfirmed.', {
-            msgType: 'unconfirmed',
-            txid: tx.txHash
-          })
-          return { txHash: tx.txHash, status: false, blockHeight: -1 }
-        } else {
-          tx.blockHeight = txInfo.block_height
         }
       }
 
