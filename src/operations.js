@@ -264,9 +264,9 @@ export async function checkTransactions(
           throw error
         }
         if (!txInfo.block_height) {
-          logger.info("Could not get block_height, probably unconfirmed.", {
-            msgType: "unconfirmed",
-            txid: tx.txHash,
+          logger.info('Could not get block_height, probably unconfirmed.', {
+            msgType: 'unconfirmed',
+            txid: tx.txHash
           })
           return { txHash: tx.txHash, status: false, blockHeight: -1 }
         } else {
@@ -283,12 +283,12 @@ export async function checkTransactions(
         return {
           txHash: tx.txHash,
           status: false,
-          blockHeight: tx.blockHeight,
+          blockHeight: tx.blockHeight
         }
       } else {
         try {
           if (
-            bskConfig.network.blockstackAPIUrl === "https://core.blockstack.org"
+            bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org'
           ) {
             await directlyPublishZonefile(tx.zonefile)
             // this is horrible. I know. but the reasons have to do with load balancing
@@ -297,14 +297,14 @@ export async function checkTransactions(
             return {
               txHash: tx.txHash,
               status: true,
-              blockHeight: tx.blockHeight,
+              blockHeight: tx.blockHeight
             }
           } else {
             // await broadcastZonefile(tx.zonefile) //todo
             return {
               txHash: tx.txHash,
               status: true,
-              blockHeight: tx.blockHeight,
+              blockHeight: tx.blockHeight
             }
           }
         } catch (err) {
@@ -312,7 +312,7 @@ export async function checkTransactions(
           return {
             txHash: tx.txHash,
             status: false,
-            blockHeight: tx.blockHeight,
+            blockHeight: tx.blockHeight
           }
         }
       }
@@ -332,18 +332,18 @@ export async function directlyPublishZonefile(
 ): Promise<boolean> {
   // speak directly to node.blockstack
 
-  const b64Zonefile = Buffer.from(zonefile).toString("base64")
+  const b64Zonefile = Buffer.from(zonefile).toString('base64')
 
   const postData =
-    "<?xml version='1.0'?>" +
-    "<methodCall><methodName>put_zonefiles</methodName>" +
+    '<?xml version=\'1.0\'?>' +
+    '<methodCall><methodName>put_zonefiles</methodName>' +
     `<params><param><array><data><value>
          <string>${b64Zonefile}</string></value>
          </data></array></param></params>` +
-    "</methodCall>"
-  const resp = await fetch("https://node.blockstack.org:6263/RPC2", {
-    method: "POST",
-    body: postData,
+    '</methodCall>'
+  const resp = await fetch('https://node.blockstack.org:6263/RPC2', {
+    method: 'POST',
+    body: postData
   })
 
   const respText = await resp.text()
@@ -356,12 +356,12 @@ export async function directlyPublishZonefile(
       `Publish zonefile error: Response from node.blockstack: ${respText}`
     )
     throw new Error(
-      "Failed to publish zonefile. Bad response from node.blockstack"
+      'Failed to publish zonefile. Bad response from node.blockstack'
     )
   }
 
-  const start = respText.indexOf("<string>") + "<string>".length
-  const stop = respText.indexOf("</string>")
+  const start = respText.indexOf('<string>') + '<string>'.length
+  const stop = respText.indexOf('</string>')
   const dataResp = respText.slice(start, stop)
   let jsonResp
   try {
@@ -373,7 +373,7 @@ export async function directlyPublishZonefile(
     throw err
   }
 
-  if ("error" in jsonResp) {
+  if ('error' in jsonResp) {
     logger.error(`Error in publishing zonefile: ${JSON.stringify(jsonResp)}`)
     throw new Error(jsonResp.error)
   }
@@ -385,7 +385,7 @@ export async function directlyPublishZonefile(
   if (jsonResp.saved[0] === 1) {
     return true
   } else if (jsonResp.saved[0] === 0) {
-    throw new Error("Zonefile not saved")
+    throw new Error('Zonefile not saved')
   }
 
   throw new Error('Invalid "saved" response from node.blockstack')
