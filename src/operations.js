@@ -234,27 +234,6 @@ export async function updateGlobalBlockHeight(): Promise<void> {
   }
 }
 
-/* eslint-disable */
-async function broadcastZonefile(zonefile: string) {
-  const body = {
-    zonefile: zonefile,
-  };
-  try {
-    const result = await fetch(bskConfig.network.coreApiUrl + "/v1/zonefile", {
-      method: "post",
-      body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" },
-    });
-    console.log("status code", result.status);
-    const txHash = await result.json();
-    console.log("zone file tx hash", txHash);
-    return txHash;
-  } catch (error) {
-    throw new Error("Failed to broadcast zonefile.");
-  }
-}
-/* eslint-disable */
-
 export async function checkTransactions(
   txs: Array<{ txHash: string, zonefile: string, blockHeight: number }>
 ): Promise<Array<{ txHash: string, status: boolean, blockHeight: number }>> {
