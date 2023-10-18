@@ -1,29 +1,21 @@
 import { config as bskConfig, validateProofs, resolveZoneFileToProfile } from 'blockstack'
 import { validateStacksAddress } from '@stacks/transactions'
-import fetch from 'node-fetch'
-
+import axios from 'axios'
 import logger from 'winston'
 
 export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
-
+  const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + fullyQualifiedAddress
   try {
-    const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + fullyQualifiedAddress
-    const nameInfoRequest = await fetch(nameInfoUrl)
-    const { status } = nameInfoRequest
-    if (status == 200) {
-      const nameInfo = await nameInfoRequest.json()
-      return (nameInfo.status === 'registered_subdomain')
-    } else {
-      return false
-    }
+    const request = await axios.get(nameInfoUrl)
+    return (request.data.status === 'registered_subdomain')
   } catch (err) {
-    if (err.message === 'Name not found') {
+    if (err.response.data.message === 'Name not found'
+      || err.response.data.message === 'Bad response status: 500'
+      || err.response.status !== 200) {
       return false
-    } else if (err.message === 'Bad response status: 500') {
-      return false // currently, the blockstack api returns 500 on subdomain lookup errors.
-    } else {
-      throw err
     }
+    logger.error(`Error checking registered subdomain from ${nameInfoUrl}: ${err}`)
+    throw err
   }
 }
 
