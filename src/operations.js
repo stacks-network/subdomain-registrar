@@ -262,7 +262,7 @@ export async function checkTransactions(
           return results
         }
         logger.error(`Error checking transaction at ${txUrl}: ${error}`)
-        throw error
+        continue
       }
     }
     if (tx.blockHeight + 7 > blockHeight) {
