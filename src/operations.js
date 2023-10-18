@@ -237,75 +237,78 @@ export async function checkTransactions(
   txs: Array<{ txHash: string, zonefile: string, blockHeight: number }>
 ): Promise<Array<{ txHash: string, status: boolean, blockHeight: number }>> {
   await updateGlobalBlockHeight()
-
   const blockHeight = SERVER_GLOBALS.lastSeenBlockHeight
 
-  return await Promise.all(
-    txs.map(async (tx) => {
-      if (!tx.blockHeight || tx.blockHeight <= 0) {
-        const txUrl = bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
-        try {
-          const txResponse = await axios.get(txUrl)
-          const txInfo = txResponse.data
-          if (!txInfo.block_height) {
-            logger.info('Could not get block_height, probably unconfirmed.', {
-              msgType: 'unconfirmed',
-              txid: tx.txHash
-            })
-            return { txHash: tx.txHash, status: false, blockHeight: -1 }
-          } else {
-            tx.blockHeight = txInfo.block_height
-          }
-        } catch (error) {
-          logger.error(`Error checking transaction at ${txUrl}: ${error}`)
-          throw error
+  const results: { txHash: string, status: boolean, blockHeight: number }[] = []
+  for (const tx of txs) {
+    if (!tx.blockHeight || tx.blockHeight <= 0) {
+      const txUrl = bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
+      try {
+        const txResponse = await axios.get(txUrl)
+        const txInfo = txResponse.data
+        if (!txInfo.block_height) {
+          logger.info('Could not get block_height, probably unconfirmed.', {
+            msgType: 'unconfirmed',
+            txid: tx.txHash
+          })
+          results.push({ txHash: tx.txHash, status: false, blockHeight: -1 })
+          continue
+        } else {
+          tx.blockHeight = txInfo.block_height
         }
+      } catch (error) {
+        if (error.response.status === 429) {
+          logger.warn(`Rate limit hit for ${bskConfig.network.coreApiUrl}, resuming transaction check later`)
+          return results
+        }
+        logger.error(`Error checking transaction at ${txUrl}: ${error}`)
+        throw error
       }
-
-      if (tx.blockHeight + 7 > blockHeight) {
-        logger.debug(
-          `block_height for ${tx.txHash}: ${tx.blockHeight} --- has ${
-            1 + blockHeight - tx.blockHeight
-          } confirmations`
-        )
-        return {
+    }
+    if (tx.blockHeight + 7 > blockHeight) {
+      logger.debug(
+        `block_height for ${tx.txHash}: ${tx.blockHeight} --- has ${
+          1 + blockHeight - tx.blockHeight
+        } confirmations`
+      )
+      results.push({
+        txHash: tx.txHash,
+        status: false,
+        blockHeight: tx.blockHeight
+      })
+    } else {
+      try {
+        if (
+          bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org'
+        ) {
+          await directlyPublishZonefile(tx.zonefile)
+          // this is horrible. I know. but the reasons have to do with load balancing
+          // on node.blockstack.org and Atlas peering.
+          await directlyPublishZonefile(tx.zonefile)
+          results.push({
+            txHash: tx.txHash,
+            status: true,
+            blockHeight: tx.blockHeight
+          })
+        } else {
+          // await broadcastZonefile(tx.zonefile) //todo
+          results.push({
+            txHash: tx.txHash,
+            status: true,
+            blockHeight: tx.blockHeight
+          })
+        }
+      } catch (err) {
+        logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
+        results.push({
           txHash: tx.txHash,
           status: false,
           blockHeight: tx.blockHeight
-        }
-      } else {
-        try {
-          if (
-            bskConfig.network.blockstackAPIUrl === 'https://core.blockstack.org'
-          ) {
-            await directlyPublishZonefile(tx.zonefile)
-            // this is horrible. I know. but the reasons have to do with load balancing
-            // on node.blockstack.org and Atlas peering.
-            await directlyPublishZonefile(tx.zonefile)
-            return {
-              txHash: tx.txHash,
-              status: true,
-              blockHeight: tx.blockHeight
-            }
-          } else {
-            // await broadcastZonefile(tx.zonefile) //todo
-            return {
-              txHash: tx.txHash,
-              status: true,
-              blockHeight: tx.blockHeight
-            }
-          }
-        } catch (err) {
-          logger.error(`Error publishing zonefile for tx ${tx.txHash}: ${err}`)
-          return {
-            txHash: tx.txHash,
-            status: false,
-            blockHeight: tx.blockHeight
-          }
-        }
+        })
       }
-    })
-  )
+    }
+  }
+  return results
 }
 
 export function hash160(input: Buffer) {
