@@ -1,4 +1,4 @@
-FROM node:12
+FROM node:12.22.12-bullseye-slim
 
 
 # Update apt and install wget
