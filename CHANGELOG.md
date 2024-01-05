@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/stacks-network/subdomain-registrar/compare/v1.2.1...v1.3.0) (2024-01-05)
+
+
+### Features
+
+* split API URLs into two env vars ([980562f](https://github.com/stacks-network/subdomain-registrar/commit/980562f7586364f1c01b6ac7d03474f454aea49c))
+
 ## [1.2.1](https://github.com/stacks-network/subdomain-registrar/compare/v1.2.0...v1.2.1) (2023-03-27)
 
 
