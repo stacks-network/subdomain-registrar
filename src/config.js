@@ -97,7 +97,10 @@ export function getConfig() {
   }
   if (process.env.BLOCKSTACK_API_URL) {
     bskConfig.network.blockstackAPIUrl = process.env.BLOCKSTACK_API_URL
-    bskConfig.network.coreApiUrl = process.env.BLOCKSTACK_API_URL
+  }
+
+  if (process.env.BLOCKSTACK_CORE_URL) {
+    bskConfig.network.coreApiUrl = process.env.BLOCKSTACK_CORE_URL
   }
 
   config.winstonConfig = {
