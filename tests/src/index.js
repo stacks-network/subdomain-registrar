@@ -9,6 +9,7 @@ import { StacksMainnet } from '@stacks/network'
 nock.disableNetConnect()
 
 bskConfig.network = new StacksMainnet()
+bskConfig.network.blockstackAPIUrl = bskConfig.network.coreApiUrl
 
 unitTestLookups()
 unitTestOperations()

@@ -7,7 +7,7 @@ import logger from 'winston'
 export async function isSubdomainRegistered(fullyQualifiedAddress: String) {
 
   try {
-    const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + fullyQualifiedAddress
+    const nameInfoUrl = bskConfig.network.blockstackAPIUrl + '/v1/names/' + fullyQualifiedAddress
     const nameInfoRequest = await fetch(nameInfoUrl)
     const { status } = nameInfoRequest
     if (status == 200) {

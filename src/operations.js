@@ -171,7 +171,7 @@ export async function submitUpdate(
     throw new Error('Invalid domain name')
   }
 
-  const nameInfoUrl = bskConfig.network.coreApiUrl + '/v1/names/' + domainName
+  const nameInfoUrl = bskConfig.network.blockstackAPIUrl + '/v1/names/' + domainName
   const nameInfoRequest = await fetch(nameInfoUrl)
   const nameInfo = await nameInfoRequest.json()
 
@@ -267,7 +267,7 @@ export async function checkTransactions(
       if (!tx.blockHeight || tx.blockHeight <= 0) {
         // const txInfo = await bskConfig.network.getTransactionInfo(tx.txHash)
         const url = new URL(
-          bskConfig.network.coreApiUrl + `/extended/v1/tx/0x${tx.txHash}`
+          bskConfig.network.blockstackAPIUrl + `/extended/v1/tx/0x${tx.txHash}`
         );
         const httpRequest = await fetch(url);
         const reqText = await httpRequest.text();
