@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/stacks-network/subdomain-registrar/compare/v1.3.0...v1.3.1) (2024-01-16)
+
+
+### Bug Fixes
+
+* update API paths to use API domain ([c650d39](https://github.com/stacks-network/subdomain-registrar/commit/c650d39f9910b1e96ab82518e32a0cc7ed27b039))
+
 # [1.3.0](https://github.com/stacks-network/subdomain-registrar/compare/v1.2.1...v1.3.0) (2024-01-05)
 
 
